@@ -399,7 +399,7 @@
         // Google Sheets Configuration
         const GOOGLE_SHEETS_CONFIG = {
             // Replace this with your Google Apps Script Web App URL
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycby3B2ZTypj1Z-FoI74BN509rpChulrWH5OpYUKCqf9UWtYmKn2NUpSsYzq_TJV-Dcwf-A/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxjMt-YAfT-6-tiJmrBbDY5H7w--jjE1uvpY8AxIHxT1AJDu-rTSYxpKZmYh_XcJMcWlw/exec',
             
             // Fallback to localStorage if offline
             USE_OFFLINE_STORAGE: true
@@ -473,7 +473,7 @@
 
         // Replace your syncToGoogleSheets function with this enhanced version:
 
-        async function syncToGoogleSheets(attendanceRecord, memberRecord) {
+        async function bettersyncToGoogleSheets(attendanceRecord, memberRecord) {
             if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
                 try {
                     console.log('🚀 Starting sync to Google Sheets...');
@@ -559,91 +559,177 @@
             }
         }
 
-        // Also add this function to test the connection manually
-        function testGoogleSheetsConnection() {
-            console.log('🧪 Testing Google Sheets connection...');
-            
-            const testRecord = {
-                id: Date.now(),
-                name: "Website Test User",
-                ageCategory: "adult",
-                contactInfo: "test@website.com",
-                date: new Date().toISOString().split('T')[0],
-                time: new Date().toTimeString().split(' ')[0],
-                isVisitor: true,
-                visitorStatus: "first_time",
-                withFamily: false,
-                familyMembers: [],
-                timestamp: new Date().toISOString()
-            };
-            
-            const testMember = {
-                name: "Website Test User",
-                ageCategory: "adult",
-                contactInfo: "test@website.com",
-                family: [],
-                firstVisit: new Date().toISOString(),
-                totalVisits: 1
-            };
-            
-            return syncToGoogleSheets(testRecord, testMember);
+        // Replace your entire syncToGoogleSheets function with this CORS-free version:
+
+    function syncToGoogleSheets(attendanceRecord, memberRecord) {
+        if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
+            return new Promise((resolve) => {
+                console.log('🚀 Starting CORS-free sync to Google Sheets...');
+                console.log('📤 Attendance Record:', attendanceRecord);
+                console.log('👤 Member Record:', memberRecord);
+                
+                try {
+                    // Create a hidden form
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = GOOGLE_SHEETS_CONFIG.SCRIPT_URL;
+                    form.target = '_blank'; // Opens in new tab (optional)
+                    form.style.display = 'none';
+                    
+                    // Add the action field
+                    const actionField = document.createElement('input');
+                    actionField.type = 'hidden';
+                    actionField.name = 'action';
+                    actionField.value = 'addAttendance';
+                    form.appendChild(actionField);
+                    
+                    // Add attendance data
+                    const attendanceField = document.createElement('input');
+                    attendanceField.type = 'hidden';
+                    attendanceField.name = 'attendanceData';
+                    attendanceField.value = JSON.stringify(attendanceRecord);
+                    form.appendChild(attendanceField);
+                    
+                    // Add member data
+                    const memberField = document.createElement('input');
+                    memberField.type = 'hidden';
+                    memberField.name = 'memberData';
+                    memberField.value = JSON.stringify(memberRecord);
+                    form.appendChild(memberField);
+                    
+                    // Add form to page and submit
+                    document.body.appendChild(form);
+                    
+                    console.log('📤 Submitting form to Google Sheets...');
+                    form.submit();
+                    
+                    // Clean up - remove form after a short delay
+                    setTimeout(() => {
+                        if (document.body.contains(form)) {
+                            document.body.removeChild(form);
+                        }
+                    }, 1000);
+                    
+                    console.log('✅ Form submitted successfully (CORS-free)');
+                    resolve({ success: true, message: 'Data submitted via form (CORS-free)' });
+                    
+                } catch (error) {
+                    console.error('💥 Form submission failed:', error);
+                    
+                    // Store for later sync if enabled
+                    if (GOOGLE_SHEETS_CONFIG.USE_OFFLINE_STORAGE) {
+                        console.log('💾 Storing for later sync...');
+                        syncPending.push({ 
+                            attendanceRecord, 
+                            memberRecord, 
+                            timestamp: new Date().toISOString(),
+                            error: error.message 
+                        });
+                        localStorage.setItem('pendingSync', JSON.stringify(syncPending));
+                        updateStatusIndicators();
+                    }
+                    
+                    resolve({ success: false, error: error.message });
+                }
+            });
+        } else {
+            console.log('⚠️ Google Sheets not configured - using localStorage only');
+            return Promise.resolve({ success: true, offline: true });
         }
-        async function loadMembersFromGoogleSheets() {
-            if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                return new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+    }
+
+    // Alternative invisible iframe method (even more invisible)
+    function syncToGoogleSheetsIframe(attendanceRecord, memberRecord) {
+        if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
+            return new Promise((resolve) => {
+                console.log('🚀 Starting iframe sync to Google Sheets...');
+                
+                try {
+                    // Create hidden iframe
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.style.width = '0';
+                    iframe.style.height = '0';
+                    iframe.style.border = 'none';
+                    document.body.appendChild(iframe);
                     
-                    // Set a timeout for the request
-                    const timeout = setTimeout(() => {
-                        if (window[callbackName]) {
-                            delete window[callbackName];
-                            if (document.body.contains(script)) {
-                                document.body.removeChild(script);
-                            }
-                            console.log('JSONP request timed out');
-                            resolve(false);
-                        }
-                    }, 10000); // 10 second timeout
+                    // Create form inside iframe
+                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                    iframeDoc.open();
+                    iframeDoc.write(`
+                        <html>
+                        <body>
+                            <form id="dataForm" method="POST" action="${GOOGLE_SHEETS_CONFIG.SCRIPT_URL}">
+                                <input type="hidden" name="action" value="addAttendance">
+                                <input type="hidden" name="attendanceData" value='${JSON.stringify(attendanceRecord)}'>
+                                <input type="hidden" name="memberData" value='${JSON.stringify(memberRecord)}'>
+                            </form>
+                            <script>
+                                document.getElementById('dataForm').submit();
+                            </script>
+                        </body>
+                        </html>
+                    `);
+                    iframeDoc.close();
                     
-                    // Define the callback function
-                    window[callbackName] = function(data) {
-                        clearTimeout(timeout);
-                        delete window[callbackName];
-                        if (document.body.contains(script)) {
-                            document.body.removeChild(script);
+                    // Clean up iframe after submission
+                    setTimeout(() => {
+                        if (document.body.contains(iframe)) {
+                            document.body.removeChild(iframe);
                         }
-                        
-                        console.log('JSONP response received:', data);
-                        
-                        if (data.success && data.members) {
-                            memberDatabase = data.members;
-                            localStorage.setItem('churchMembers', JSON.stringify(memberDatabase));
-                            console.log('Members loaded from Google Sheets via JSONP:', data.members.length, 'members');
-                            resolve(true);
-                        } else {
-                            console.error('Failed to load members:', data.error || 'No members data');
-                            resolve(false);
-                        }
-                    };
+                    }, 2000);
                     
-                    // Make the JSONP request
-                    script.src = GOOGLE_SHEETS_CONFIG.SCRIPT_URL + '?action=getMembers&callback=' + callbackName;
-                    script.onerror = function() {
-                        clearTimeout(timeout);
-                        delete window[callbackName];
-                        if (document.body.contains(script)) {
-                            document.body.removeChild(script);
-                        }
-                        console.error('JSONP script failed to load');
-                        resolve(false);
-                    };
+                    console.log('✅ Data submitted via iframe (CORS-free)');
+                    resolve({ success: true, message: 'Data submitted via iframe (CORS-free)' });
                     
-                    document.body.appendChild(script);
-                });
-            }
-            return false;
+                } catch (error) {
+                    console.error('💥 Iframe submission failed:', error);
+                    resolve({ success: false, error: error.message });
+                }
+            });
+        } else {
+            return Promise.resolve({ success: true, offline: true });
         }
+    }
+
+    // Updated test function using the CORS-free method
+    async function testGoogleSheetsConnection() {
+        console.log('🧪 Testing CORS-free Google Sheets connection...');
+        
+        const testRecord = {
+            id: Date.now(),
+            name: "CORS-Free Test",
+            ageCategory: "adult",
+            contactInfo: "corstest@website.com",
+            date: new Date().toISOString().split('T')[0],
+            time: new Date().toTimeString().split(' ')[0],
+            isVisitor: true,
+            visitorStatus: "first_time",
+            withFamily: false,
+            familyMembers: [],
+            timestamp: new Date().toISOString()
+        };
+        
+        const testMember = {
+            name: "CORS-Free Test",
+            ageCategory: "adult",
+            contactInfo: "corstest@website.com",
+            family: [],
+            firstVisit: new Date().toISOString(),
+            totalVisits: 1
+        };
+        
+        const result = await syncToGoogleSheets(testRecord, testMember);
+        console.log('🧪 Test result:', result);
+        
+        // Also test iframe method
+        console.log('🧪 Testing iframe method...');
+        const iframeResult = await syncToGoogleSheetsIframe(testRecord, testMember);
+        console.log('🧪 Iframe test result:', iframeResult);
+        
+        return result;
+    }
+
         async function emailReport(reportType, startDate, endDate, email = null) {
             if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
                 try {
