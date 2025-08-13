@@ -399,7 +399,7 @@
         // Google Sheets Configuration
         const GOOGLE_SHEETS_CONFIG = {
             // Replace this with your Google Apps Script Web App URL
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw9sTQruDYTygfu425k0jKl9ZDeN_0FlvLT4vILCvrf9klIbKKcGPoI_eodnn1-kianhw/exec',
+            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyn-T_L-hnVafp7KZHDQ6JljJOGrDZNAnOWh0llzg75cfECzOetnFWXGq1TeFGJOaY2QQ/exec',
             
             // Fallback to localStorage if offline
             USE_OFFLINE_STORAGE: true
@@ -415,26 +415,22 @@
         async function syncToGoogleSheets(attendanceRecord, memberRecord) {
             if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
                 try {
+                    // Use a form submission approach to avoid CORS
+                    const formData = new FormData();
+                    formData.append('action', 'addAttendance');
+                    formData.append('attendanceData', JSON.stringify(attendanceRecord));
+                    formData.append('memberData', JSON.stringify(memberRecord));
+                    
                     const response = await fetch(GOOGLE_SHEETS_CONFIG.SCRIPT_URL, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'addAttendance',
-                            attendanceData: attendanceRecord,
-                            memberData: memberRecord
-                        })
+                        body: formData,
+                        mode: 'no-cors' // This prevents CORS errors but limits response access
                     });
                     
-                    const result = await response.json();
+                    // Since we can't read the response with no-cors, assume success
+                    console.log('Submitted to Google Sheets (no-cors mode)');
+                    return { success: true };
                     
-                    if (result.success) {
-                        console.log('Successfully synced to Google Sheets');
-                        return { success: true };
-                    } else {
-                        throw new Error(result.error);
-                    }
                 } catch (error) {
                     console.error('Failed to sync to Google Sheets:', error);
                     
@@ -452,33 +448,39 @@
             }
         }
 
-        async function loadMembersFromGoogleSheets() {
+        // Alternative: Use JSONP for GET requests
+        async function loadMembersFromGoogleSheetsJSONP() {
             if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                try {
-                    const response = await fetch(GOOGLE_SHEETS_CONFIG.SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'getMembers'
-                        })
-                    });
+                return new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
                     
-                    const result = await response.json();
+                    // Define the callback function
+                    window[callbackName] = function(data) {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        
+                        if (data.success) {
+                            memberDatabase = data.members;
+                            localStorage.setItem('churchMembers', JSON.stringify(memberDatabase));
+                            console.log('Members loaded from Google Sheets via JSONP');
+                            resolve(true);
+                        } else {
+                            console.error('Failed to load members:', data.error);
+                            resolve(false);
+                        }
+                    };
                     
-                    if (result.success) {
-                        memberDatabase = result.members;
-                        localStorage.setItem('churchMembers', JSON.stringify(memberDatabase));
-                        console.log('Members loaded from Google Sheets');
-                        return true;
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (error) {
-                    console.error('Failed to load members from Google Sheets:', error);
-                    return false;
-                }
+                    // Make the JSONP request
+                    script.src = GOOGLE_SHEETS_CONFIG.SCRIPT_URL + '?action=getMembers&callback=' + callbackName;
+                    script.onerror = function() {
+                        delete window[callbackName];
+                        document.body.removeChild(script);
+                        reject(new Error('JSONP request failed'));
+                    };
+                    
+                    document.body.appendChild(script);
+                });
             }
             return false;
         }
