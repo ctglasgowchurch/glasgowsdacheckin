@@ -1,206 +1,792 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Glasgow SDA Check-in</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
-    form, .panel { max-width: 720px; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
-    label { display: block; font-weight: 600; margin-top: .75rem; }
-    input, select, textarea { width: 100%; padding: .6rem .7rem; margin-top: .35rem; border: 1px solid #ccc; border-radius: 6px; }
-    button { padding: .6rem .9rem; border: 0; border-radius: 6px; background: #0a7cff; color: white; font-weight: 600; cursor: pointer; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
-    .muted { color: #666; font-size: .9rem; }
-    .ok { color: #0b7d37; }
-    .err { color: #b00020; }
-    ul { padding-left: 1.2rem; }
-    code.block { display:block; background:#f7f7f7; padding:.75rem; border-radius:6px; overflow:auto; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glasgow SDA Church - Check-In</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .form-container {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+            font-size: 1.1em;
+        }
+
+        .input-container {
+            position: relative;
+        }
+
+        input[type="text"], input[type="email"], input[type="tel"], select {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus, select:focus {
+            outline: none;
+            border-color: #4facfe;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .suggestion-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-group:hover {
+            background: #e9ecef;
+        }
+
+        .checkbox-group input[type="checkbox"], .checkbox-group input[type="radio"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .radio-group .checkbox-group {
+            margin-bottom: 0;
+            flex: 1;
+        }
+
+        .family-section, .visitor-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #e8f4fd;
+            border-radius: 12px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .family-member {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e1e5e9;
+        }
+
+        .family-member-info {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        .family-member-name {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .family-member-details {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .add-family-section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            border: 2px dashed #4facfe;
+        }
+
+        .add-family-form {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+            align-items: end;
+        }
+
+        .family-contact-field {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56cc9d 0%, #6eaa5b 100%);
+            color: white;
+            font-size: 1.2em;
+            padding: 18px 40px;
+            width: 100%;
+            margin-top: 30px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(86, 204, 157, 0.4);
+        }
+
+        .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .remove-btn:hover {
+            background: #c82333;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+
+            .radio-group {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .add-family-form {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-  <h1>Glasgow SDA Check-in</h1>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ Glasgow SDA Church</h1>
+            <p>Welcome! Please check in below</p>
+        </div>
 
-  <div class="panel">
-    <p class="muted">Connected to Google Apps Script Web App:</p>
-    <code class="block" id="endpoint">—</code>
-  </div>
+        <div class="form-container">
+            <div id="statusMessage"></div>
 
-  <form id="checkinForm">
-    <h2>New Attendance</h2>
-    <div class="row">
-      <div>
-        <label for="name">Full name</label>
-        <input id="name" name="name" required />
-      </div>
-      <div>
-        <label for="ageCategory">Age category</label>
-        <select id="ageCategory" name="ageCategory" required>
-          <option value="adult">Adult</option>
-          <option value="youth">Youth</option>
-          <option value="child">Child</option>
-          <option value="infant">Infant</option>
-        </select>
-      </div>
+            <form id="checkinForm">
+                <div class="form-group">
+                    <label for="name">Your Name:</label>
+                    <div class="input-container">
+                        <input type="text" id="name" name="name" placeholder="Start typing your name..." autocomplete="off" required>
+                        <div id="suggestions" class="suggestions"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Age Category:</label>
+                    <div class="radio-group">
+                        <div class="checkbox-group">
+                            <input type="radio" id="ageAdult" name="ageCategory" value="adult" checked>
+                            <label for="ageAdult">Adult (18+)</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="radio" id="ageYouth" name="ageCategory" value="youth">
+                            <label for="ageYouth">Youth (13-17)</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="radio" id="ageChild" name="ageCategory" value="child">
+                            <label for="ageChild">Child (5-12)</label>
+                        </div>
+                        <div class="checkbox-group">
+                            <input type="radio" id="ageInfant" name="ageCategory" value="infant">
+                            <label for="ageInfant">Infant (0-4)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contactSection" class="form-group">
+                    <label for="contact">Contact Information:</label>
+                    <input type="text" id="contact" name="contact" placeholder="Phone number or email address">
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="withFamily">
+                    <label for="withFamily">I'm here with family members</label>
+                </div>
+
+                <div id="familySection" class="family-section">
+                    <h3>👨‍👩‍👧‍👦 Family Members Attending</h3>
+                    <div id="familyMembers"></div>
+                    
+                    <div class="add-family-section">
+                        <h4>Add Family Member</h4>
+                        <div class="add-family-form">
+                            <div>
+                                <input type="text" id="newFamilyMember" placeholder="Family member name">
+                            </div>
+                            <div>
+                                <select id="newFamilyAge">
+                                    <option value="adult">Adult</option>
+                                    <option value="youth">Youth</option>
+                                    <option value="child">Child</option>
+                                    <option value="infant">Infant</option>
+                                </select>
+                            </div>
+                            <div class="family-contact-field hidden" id="familyContactField">
+                                <input type="text" id="newFamilyContact" placeholder="Contact info (for adults/youth)">
+                            </div>
+                            <div style="grid-column: 1 / -1; margin-top: 10px;">
+                                <button type="button" class="btn btn-secondary" onclick="addFamilyMember()">Add Family Member</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkbox-group">
+                    <input type="checkbox" id="isVisitor">
+                    <label for="isVisitor">I'm visiting today</label>
+                </div>
+
+                <div id="visitorSection" class="visitor-section">
+                    <h3>👋 Welcome Visitor!</h3>
+                    <p>We're so glad you're here with us today! 🙏</p>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label for="visitorStatus">This is my:</label>
+                        <select id="visitorStatus" name="visitorStatus">
+                            <option value="first_time">First time visiting</option>
+                            <option value="returning_visitor">Second or third visit</option>
+                            <option value="been_a_while">Been a while since I visited</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-success">Check In ✅</button>
+            </form>
+        </div>
     </div>
 
-    <label for="contact">Contact info (optional)</label>
-    <input id="contact" name="contact" placeholder="email or phone" />
+    <script>
+        // === CONFIG ===
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOCSNQczLRu6zLRKq0wSiCLo-8HI_Y11mDEqht0Qh7fbi2hbhO7eb_YayeppJj6pm32Q/exec';
 
-    <div class="row">
-      <div>
-        <label for="date">Service date</label>
-        <input id="date" name="date" type="date" required />
-      </div>
-      <div>
-        <label for="time">Service time</label>
-        <input id="time" name="time" type="time" required />
-      </div>
-    </div>
+        // Store loaded members
+        let memberDatabase = [];
 
-    <div class="row">
-      <div>
-        <label for="isVisitor">Is visitor?</label>
-        <select id="isVisitor" name="isVisitor">
-          <option value="false">No (member/regular)</option>
-          <option value="true">Yes (visitor)</option>
-        </select>
-      </div>
-      <div>
-        <label for="visitorStatus">Visitor status</label>
-        <select id="visitorStatus" name="visitorStatus">
-          <option value="">—</option>
-          <option value="first_time">First time</option>
-          <option value="returning_visitor">Returning</option>
-          <option value="been_a_while">Been a while</option>
-        </select>
-      </div>
-    </div>
+        // Helper function to make API calls
+        const post = async (payloadObj) => {
+            const form = new URLSearchParams();
+            form.append('payload', JSON.stringify(payloadObj));
+            const res = await fetch(SCRIPT_URL, { method: 'POST', body: form });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return await res.json();
+        };
 
-    <label for="familyNames">Family members (comma-separated names)</label>
-    <input id="familyNames" name="familyNames" placeholder="e.g., Jane Doe, Alex Doe" />
+        // Status message helper
+        function showMessage(message, type = 'info') {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
 
-    <div style="margin-top:1rem; display:flex; gap:.5rem;">
-      <button type="submit">Submit attendance</button>
-      <button type="button" id="btnLoadMembers">Load members</button>
-    </div>
+        // Load members from Google Sheets
+        async function loadMembers() {
+            try {
+                const result = await post({ action: 'getMembers' });
+                if (!result.success) throw new Error(result.error || 'Unknown error');
+                
+                memberDatabase = result.members || [];
+                console.log(`Loaded ${memberDatabase.length} members from Google Sheets`);
+                
+                return true;
+            } catch (err) {
+                console.error('Failed to load members:', err);
+                return false;
+            }
+        }
 
-    <p id="status" class="muted" style="margin-top:1rem;"></p>
-  </form>
+        // Handle name input for suggestions
+        function handleNameInput(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const suggestions = document.getElementById('suggestions');
+            
+            if (query.length < 2) {
+                suggestions.style.display = 'none';
+                return;
+            }
 
-  <div class="panel">
-    <h2>Known Members (from sheet)</h2>
-    <ul id="memberList"></ul>
-  </div>
+            const matches = memberDatabase.filter(member => 
+                member.name.toLowerCase().includes(query) ||
+                member.name.toLowerCase().startsWith(query)
+            ).slice(0, 5);
 
-  <script>
-    // === CONFIG ===
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOCSNQczLRu6zLRKq0wSiCLo-8HI_Y11mDEqht0Qh7fbi2hbhO7eb_YayeppJj6pm32Q/exec';
-    document.getElementById('endpoint').textContent = SCRIPT_URL;
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(member => 
+                    `<div class="suggestion-item" onclick="selectMember('${member.name.replace(/'/g, "\\'")}')">${member.name}</div>`
+                ).join('');
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
 
-    // Helpers
-    const post = async (payloadObj) => {
-      // URL-encoded body to avoid CORS preflight
-      const form = new URLSearchParams();
-      form.append('payload', JSON.stringify(payloadObj));
+        // Select a member from suggestions
+        function selectMember(name) {
+            document.getElementById('name').value = name;
+            document.getElementById('suggestions').style.display = 'none';
+            
+            const member = memberDatabase.find(m => m.name === name);
+            if (member) {
+                // Set age category
+                if (member.ageCategory) {
+                    const ageRadio = document.querySelector(`input[name="ageCategory"][value="${member.ageCategory}"]`);
+                    if (ageRadio) {
+                        ageRadio.checked = true;
+                        toggleContactSection();
+                    }
+                }
+                
+                // Set contact info
+                if (member.contactInfo) {
+                    document.getElementById('contact').value = member.contactInfo;
+                }
+                
+                // Load family members
+                if (member.family && member.family.length > 0) {
+                    document.getElementById('withFamily').checked = true;
+                    toggleFamilySection();
+                    loadExistingFamily(member.family);
+                }
+            }
+        }
 
-      const res = await fetch(SCRIPT_URL, { method: 'POST', body: form });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return await res.json();
-    };
+        // Load existing family members
+        function loadExistingFamily(family) {
+            const familyContainer = document.getElementById('familyMembers');
+            familyContainer.innerHTML = '';
+            
+            family.forEach((familyMember, index) => {
+                addFamilyMemberToUI(familyMember.name, familyMember.ageCategory || 'adult', familyMember.contactInfo || '', true);
+            });
+        }
 
-    const $status = document.getElementById('status');
-    const setStatus = (msg, cls='muted') => {
-      $status.className = cls;
-      $status.textContent = msg;
-    };
+        // Toggle contact section based on age
+        function toggleContactSection() {
+            const selectedAge = document.querySelector('input[name="ageCategory"]:checked').value;
+            const contactSection = document.getElementById('contactSection');
+            
+            if (selectedAge === 'child' || selectedAge === 'infant') {
+                contactSection.style.display = 'none';
+                document.getElementById('contact').value = '';
+            } else {
+                contactSection.style.display = 'block';
+            }
+        }
 
-    // Load members
-    async function loadMembers() {
-      setStatus('Loading members…');
-      try {
-        const result = await post({ action: 'getMembers' });
-        if (!result.success) throw new Error(result.error || 'Unknown error');
-        const list = document.getElementById('memberList');
-        list.innerHTML = '';
-        result.members.forEach(m => {
-          const li = document.createElement('li');
-          li.textContent = m.name + (m.ageCategory ? ` — ${m.ageCategory}` : '');
-          list.appendChild(li);
+        // Toggle family contact field
+        function toggleFamilyContactField() {
+            const selectedAge = document.getElementById('newFamilyAge').value;
+            const contactField = document.getElementById('familyContactField');
+            
+            if (selectedAge === 'adult' || selectedAge === 'youth') {
+                contactField.classList.remove('hidden');
+            } else {
+                contactField.classList.add('hidden');
+                document.getElementById('newFamilyContact').value = '';
+            }
+        }
+
+        // Toggle family section
+        function toggleFamilySection() {
+            const familySection = document.getElementById('familySection');
+            const isChecked = document.getElementById('withFamily').checked;
+            familySection.style.display = isChecked ? 'block' : 'none';
+        }
+
+        // Toggle visitor section
+        function toggleVisitorSection() {
+            const visitorSection = document.getElementById('visitorSection');
+            const isChecked = document.getElementById('isVisitor').checked;
+            visitorSection.style.display = isChecked ? 'block' : 'none';
+        }
+
+        // Add family member to UI
+        function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked = true) {
+            const familyContainer = document.getElementById('familyMembers');
+            const memberDiv = document.createElement('div');
+            memberDiv.className = 'family-member';
+            
+            const ageEmoji = {
+                'adult': '👤',
+                'youth': '🧑',
+                'child': '👶',
+                'infant': '🍼'
+            }[ageCategory] || '👤';
+            
+            const contactDisplay = contactInfo ? ` • ${contactInfo}` : '';
+            
+            memberDiv.innerHTML = `
+                <input type="checkbox" name="familyMember" value="${name}" data-age="${ageCategory}" data-contact="${contactInfo}" ${isChecked ? 'checked' : ''}>
+                <div class="family-member-info">
+                    <div class="family-member-name">${ageEmoji} ${name}</div>
+                    <div class="family-member-details">${ageCategory.charAt(0).toUpperCase() + ageCategory.slice(1)}${contactDisplay}</div>
+                </div>
+                <button type="button" class="remove-btn" onclick="removeFamilyMember(this)">×</button>
+            `;
+            
+            familyContainer.appendChild(memberDiv);
+        }
+
+        // Add family member
+        function addFamilyMember() {
+            const nameInput = document.getElementById('newFamilyMember');
+            const ageSelect = document.getElementById('newFamilyAge');
+            const contactInput = document.getElementById('newFamilyContact');
+            
+            const name = nameInput.value.trim();
+            const ageCategory = ageSelect.value;
+            const contactInfo = contactInput.value.trim();
+            
+            if (name) {
+                addFamilyMemberToUI(name, ageCategory, contactInfo, true);
+                
+                // Clear inputs
+                nameInput.value = '';
+                contactInput.value = '';
+                ageSelect.value = 'adult';
+                toggleFamilyContactField();
+            }
+        }
+
+        // Remove family member
+        function removeFamilyMember(button) {
+            button.parentElement.remove();
+        }
+
+        // Submit form
+        async function submitAttendance(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            if (!name) {
+                showMessage('Please enter your name', 'error');
+                return;
+            }
+
+            const ageCategory = document.querySelector('input[name="ageCategory"]:checked').value;
+            const contactInfo = document.getElementById('contact').value.trim();
+            
+            // Validate contact info for adults and youth
+            if ((ageCategory === 'adult' || ageCategory === 'youth') && !contactInfo) {
+                showMessage('Please provide contact information', 'error');
+                return;
+            }
+
+            const isVisitor = document.getElementById('isVisitor').checked;
+            const withFamily = document.getElementById('withFamily').checked;
+            const visitorStatus = isVisitor ? document.getElementById('visitorStatus').value : '';
+            
+            // Get current date and time
+            const now = new Date();
+            const date = now.toISOString().split('T')[0];
+            const time = now.toTimeString().split(' ')[0].substring(0, 5);
+
+            // Collect family members
+            const familyMembers = [];
+            if (withFamily) {
+                const checkedFamily = document.querySelectorAll('input[name="familyMember"]:checked');
+                checkedFamily.forEach(checkbox => {
+                    familyMembers.push(checkbox.value); // Just the name as string
+                });
+            }
+
+            const attendanceData = {
+                timestamp: now.toISOString(),
+                id: 'web_' + Date.now(),
+                name,
+                ageCategory,
+                contactInfo,
+                date,
+                time,
+                isVisitor,
+                visitorStatus,
+                withFamily,
+                familyMembers
+            };
+
+            const memberData = {
+                name,
+                ageCategory,
+                contactInfo,
+                family: familyMembers,
+                firstVisit: isVisitor && visitorStatus === 'first_time' ? date : '',
+                totalVisits: 1
+            };
+
+            try {
+                showMessage('Submitting attendance...', 'info');
+                
+                const result = await post({
+                    action: 'addAttendance',
+                    attendanceData,
+                    memberData
+                });
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Unknown error');
+                }
+                
+                // Success message
+                let message = `Welcome, ${name}! `;
+                if (isVisitor) {
+                    if (visitorStatus === 'first_time') {
+                        message += "We're so glad you're visiting us for the first time! 🎉";
+                    } else if (visitorStatus === 'been_a_while') {
+                        message += "Great to see you back after a while! 😊";
+                    } else {
+                        message += "Thanks for visiting us again! 🙏";
+                    }
+                } else {
+                    message += "You're checked in! 📝";
+                }
+                
+                if (familyMembers.length > 0) {
+                    message += ` Family: ${familyMembers.join(', ')}`;
+                }
+                
+                showMessage(message, 'success');
+                
+                // Reset form
+                resetForm();
+                
+            } catch (err) {
+                console.error('Submit error:', err);
+                showMessage('Failed to submit: ' + err.message, 'error');
+            }
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('checkinForm').reset();
+            document.getElementById('ageAdult').checked = true;
+            document.getElementById('familySection').style.display = 'none';
+            document.getElementById('visitorSection').style.display = 'none';
+            document.getElementById('contactSection').style.display = 'block';
+            document.getElementById('familyMembers').innerHTML = '';
+            document.getElementById('suggestions').style.display = 'none';
+            document.getElementById('newFamilyAge').value = 'adult';
+            toggleFamilyContactField();
+        }
+
+        // Event listeners
+        document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
+        document.getElementById('name').addEventListener('input', handleNameInput);
+        document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
+        document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
+        document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
+        
+        // Age category radio buttons
+        document.querySelectorAll('input[name="ageCategory"]').forEach(radio => {
+            radio.addEventListener('change', toggleContactSection);
         });
-        setStatus(`Loaded ${result.members.length} members.`, 'ok');
-      } catch (err) {
-        console.error(err);
-        setStatus('Failed to load members: ' + err.message, 'err');
-      }
-    }
 
-    // Submit attendance
-    async function submitAttendance(e) {
-      e.preventDefault();
-      setStatus('Submitting attendance…');
-
-      const name = document.getElementById('name').value.trim();
-      const ageCategory = document.getElementById('ageCategory').value;
-      const contactInfo = document.getElementById('contact').value.trim();
-      const date = document.getElementById('date').value;
-      const time = document.getElementById('time').value;
-      const isVisitor = document.getElementById('isVisitor').value === 'true';
-      const visitorStatus = document.getElementById('visitorStatus').value || '';
-      const familyMembers = document.getElementById('familyNames').value
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
-
-      const attendanceData = {
-        timestamp: new Date().toISOString(),
-        id: crypto.randomUUID(),
-        name,
-        ageCategory,
-        contactInfo,
-        date,
-        time,
-        isVisitor,
-        visitorStatus,
-        withFamily: familyMembers.length > 0,
-        familyMembers
-      };
-
-      const memberData = {
-        name,
-        ageCategory,
-        contactInfo,
-        family: familyMembers,
-        firstVisit: isVisitor && visitorStatus === 'first_time' ? date : '',
-        totalVisits: 1
-      };
-
-      try {
-        const result = await post({
-          action: 'addAttendance',
-          attendanceData,
-          memberData
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.input-container')) {
+                document.getElementById('suggestions').style.display = 'none';
+            }
         });
-        if (!result.success) throw new Error(result.error || 'Unknown error');
-        setStatus('Attendance recorded successfully.', 'ok');
-        e.target.reset();
-        document.getElementById('date').value = new Date().toISOString().slice(0,10);
-      } catch (err) {
-        console.error(err);
-        setStatus('Failed to submit: ' + err.message, 'err');
-      }
-    }
 
-    document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
-    document.getElementById('btnLoadMembers').addEventListener('click', loadMembers);
-
-    // Prefill date/time, attempt member load on start
-    window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('date').value = new Date().toISOString().slice(0,10);
-      const now = new Date();
-      document.getElementById('time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
-      loadMembers().catch(()=>{});
-    });
-  </script>
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            toggleContactSection();
+            toggleFamilyContactField();
+            loadMembers().catch(() => {
+                console.log('Failed to load members on startup');
+            });
+        });
+    </script>
 </body>
 </html>
