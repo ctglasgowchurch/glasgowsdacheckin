@@ -1,1316 +1,206 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Church Attendance Check-In</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .form-container {
-            padding: 40px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-            font-size: 1.1em;
-        }
-
-        .input-container {
-            position: relative;
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 15px 20px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 1.1em;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #4facfe;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-        }
-
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 2px solid #e1e5e9;
-            border-top: none;
-            border-radius: 0 0 12px 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .suggestion-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .checkbox-group:hover {
-            background: #e9ecef;
-        }
-
-        .checkbox-group input[type="checkbox"] {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-            cursor: pointer;
-        }
-
-        .checkbox-group label {
-            margin: 0;
-            cursor: pointer;
-            flex: 1;
-        }
-
-        .family-section, .visitor-section {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            background: #e8f4fd;
-            border-radius: 12px;
-            border-left: 4px solid #4facfe;
-        }
-
-        .family-member {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-            padding: 10px;
-            background: white;
-            border-radius: 8px;
-        }
-
-        .family-member input[type="checkbox"] {
-            margin-right: 10px;
-        }
-
-        .add-family-member {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-            flex-wrap: wrap;
-        }
-
-        .add-family-member input, .add-family-member select {
-            flex: 1;
-            min-width: 150px;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #56cc9d 0%, #6eaa5b 100%);
-            color: white;
-            font-size: 1.2em;
-            padding: 18px 40px;
-            width: 100%;
-            margin-top: 30px;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(86, 204, 157, 0.4);
-        }
-
-        .status-message {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .admin-panel {
-            margin-top: 30px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            border-top: 3px solid #dc3545;
-        }
-
-        .admin-panel h3 {
-            color: #dc3545;
-            margin-bottom: 15px;
-        }
-
-        .admin-controls {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .form-container {
-                padding: 20px;
-            }
-
-            .admin-controls {
-                flex-direction: column;
-            }
-
-            .admin-controls .btn {
-                width: 100%;
-                margin-bottom: 10px;
-            }
-        }
-
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4facfe;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>Glasgow SDA Check-in</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; }
+    form, .panel { max-width: 720px; border: 1px solid #ddd; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
+    label { display: block; font-weight: 600; margin-top: .75rem; }
+    input, select, textarea { width: 100%; padding: .6rem .7rem; margin-top: .35rem; border: 1px solid #ccc; border-radius: 6px; }
+    button { padding: .6rem .9rem; border: 0; border-radius: 6px; background: #0a7cff; color: white; font-weight: 600; cursor: pointer; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .muted { color: #666; font-size: .9rem; }
+    .ok { color: #0b7d37; }
+    .err { color: #b00020; }
+    ul { padding-left: 1.2rem; }
+    code.block { display:block; background:#f7f7f7; padding:.75rem; border-radius:6px; overflow:auto; }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🏛️ Church Check-In</h1>
-            <p>Welcome! Please sign in below</p>
-        </div>
+  <h1>Glasgow SDA Check-in</h1>
 
-        <div class="form-container">
-            <div id="statusMessage"></div>
+  <div class="panel">
+    <p class="muted">Connected to Google Apps Script Web App:</p>
+    <code class="block" id="endpoint">—</code>
+  </div>
 
-            <form id="attendanceForm">
-                <div class="form-group">
-                    <label for="memberName">Your Name:</label>
-                    <div class="input-container">
-                        <input type="text" id="memberName" placeholder="Start typing your name..." autocomplete="off">
-                        <div id="suggestions" class="suggestions"></div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Age Category:</label>
-                    <div style="display: flex; gap: 20px; margin-top: 10px;">
-                        <div class="checkbox-group" style="margin-bottom: 0; flex: 1;">
-                            <input type="radio" id="ageAdult" name="ageCategory" value="adult" checked>
-                            <label for="ageAdult">Adult (18+)</label>
-                        </div>
-                        <div class="checkbox-group" style="margin-bottom: 0; flex: 1;">
-                            <input type="radio" id="ageChild" name="ageCategory" value="child">
-                            <label for="ageChild">Child (Under 18)</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="contactSection" class="form-group">
-                    <label for="contactInfo">Contact Number or Email:</label>
-                    <input type="text" id="contactInfo" placeholder="Phone number or email address">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="withFamily">
-                    <label for="withFamily">I'm here with family</label>
-                </div>
-
-                <div id="familySection" class="family-section">
-                    <h3>Family Members</h3>
-                    <div id="familyMembers"></div>
-                    <div class="add-family-member">
-                        <input type="text" id="newFamilyMember" placeholder="Family member name">
-                        <select id="newFamilyAge" style="padding: 15px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 1.1em; background: #f8f9fa;">
-                            <option value="adult">Adult</option>
-                            <option value="child">Child</option>
-                        </select>
-                        <input type="text" id="newFamilyContact" placeholder="Contact (if adult)" style="display: block; margin-top: 10px;">
-                        <button type="button" class="btn btn-secondary" onclick="addFamilyMember()">Add</button>
-                    </div>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="isVisitor">
-                    <label for="isVisitor">I'm visiting today</label>
-                </div>
-
-                <div id="visitorSection" class="visitor-section">
-                    <p>Welcome! We're so glad you're here with us today. 🙏</p>
-                </div>
-
-                <button type="submit" class="btn btn-success">Check In ✅</button>
-            </form>
-
-            <div class="admin-panel">
-                <h3>📊 Admin Controls</h3>
-                <div class="admin-controls">
-                    <button type="button" class="btn btn-primary" onclick="exportToday()">Email/Export Today's Attendance</button>
-                    <button type="button" class="btn btn-primary" onclick="exportWeekly()">Email/Export This Week</button>
-                    <button type="button" class="btn btn-secondary" onclick="viewAllData()">View All Data</button>
-                    <button type="button" class="btn btn-secondary" onclick="syncPendingRecords()">Sync Pending Records</button>
-                    <button type="button" class="btn btn-secondary" onclick="loadMembersFromGoogleSheets()">Refresh from Google Sheets</button>
-                    <button type="button" class="btn btn-secondary" onclick="clearAllData()">Clear Local Data</button>
-                </div>
-                <div style="margin-top: 15px; padding: 10px; background: #e8f4fd; border-radius: 8px; font-size: 0.9em;">
-                    <strong>📋 Setup Status:</strong>
-                    <div id="setupStatus">
-                        <span style="color: #856404;">⚠️ Google Sheets not configured - using local storage only</span>
-                    </div>
-                    <div style="margin-top: 8px;">
-                        <strong>📱 Connection:</strong> <span id="connectionStatus">Checking...</span> | 
-                        <strong>📝 Pending Sync:</strong> <span id="pendingCount">0</span> records
-                    </div>
-                </div>
-            </div>
-        </div>
+  <form id="checkinForm">
+    <h2>New Attendance</h2>
+    <div class="row">
+      <div>
+        <label for="name">Full name</label>
+        <input id="name" name="name" required />
+      </div>
+      <div>
+        <label for="ageCategory">Age category</label>
+        <select id="ageCategory" name="ageCategory" required>
+          <option value="adult">Adult</option>
+          <option value="youth">Youth</option>
+          <option value="child">Child</option>
+          <option value="infant">Infant</option>
+        </select>
+      </div>
     </div>
 
-    <script>
-        // Google Sheets Configuration
-        const GOOGLE_SHEETS_CONFIG = {
-            // Replace this with your Google Apps Script Web App URL
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxjMt-YAfT-6-tiJmrBbDY5H7w--jjE1uvpY8AxIHxT1AJDu-rTSYxpKZmYh_XcJMcWlw/exec',
-            
-            // Fallback to localStorage if offline
-            USE_OFFLINE_STORAGE: true
-        };
+    <label for="contact">Contact info (optional)</label>
+    <input id="contact" name="contact" placeholder="email or phone" />
 
-        // In-memory database with Google Sheets integration
-        let attendanceData = JSON.parse(localStorage.getItem('churchAttendance') || '[]');
-        let memberDatabase = JSON.parse(localStorage.getItem('churchMembers') || '[]');
-        let isOnline = navigator.onLine;
-        let syncPending = JSON.parse(localStorage.getItem('pendingSync') || '[]');
+    <div class="row">
+      <div>
+        <label for="date">Service date</label>
+        <input id="date" name="date" type="date" required />
+      </div>
+      <div>
+        <label for="time">Service time</label>
+        <input id="time" name="time" type="time" required />
+      </div>
+    </div>
 
-        // Replace the syncToGoogleSheets function in your HTML with this:
+    <div class="row">
+      <div>
+        <label for="isVisitor">Is visitor?</label>
+        <select id="isVisitor" name="isVisitor">
+          <option value="false">No (member/regular)</option>
+          <option value="true">Yes (visitor)</option>
+        </select>
+      </div>
+      <div>
+        <label for="visitorStatus">Visitor status</label>
+        <select id="visitorStatus" name="visitorStatus">
+          <option value="">—</option>
+          <option value="first_time">First time</option>
+          <option value="returning_visitor">Returning</option>
+          <option value="been_a_while">Been a while</option>
+        </select>
+      </div>
+    </div>
 
-        async function oldsyncToGoogleSheets(attendanceRecord, memberRecord) {
-            if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                try {
-                    // Create the payload as expected by your Google Apps Script
-                    const payload = {
-                        action: 'addAttendance',
-                        attendanceData: attendanceRecord,
-                        memberData: memberRecord
-                    };
-                    
-                    console.log('Sending to Google Sheets:', payload);
-                    
-                    const response = await fetch(GOOGLE_SHEETS_CONFIG.SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    
-                    // Try to read the response
-                    try {
-                        const result = await response.json();
-                        console.log('Google Sheets response:', result);
-                        
-                        if (result.success) {
-                            console.log('Successfully synced to Google Sheets');
-                            return { success: true };
-                        } else {
-                            throw new Error(result.error || 'Unknown error from Google Sheets');
-                        }
-                    } catch (parseError) {
-                        // If we can't parse the response, but got a 200 status, assume success
-                        if (response.ok) {
-                            console.log('Sync likely successful (could not parse response)');
-                            return { success: true };
-                        } else {
-                            throw new Error('Failed to parse response from Google Sheets');
-                        }
-                    }
-                    
-                } catch (error) {
-                    console.error('Failed to sync to Google Sheets:', error);
-                    
-                    // Store for later sync if enabled
-                    if (GOOGLE_SHEETS_CONFIG.USE_OFFLINE_STORAGE) {
-                        syncPending.push({ attendanceRecord, memberRecord, timestamp: new Date().toISOString() });
-                        localStorage.setItem('pendingSync', JSON.stringify(syncPending));
-                    }
-                    
-                    return { success: false, error: error.message };
-                }
-            } else {
-                console.log('Google Sheets not configured - using localStorage only');
-                return { success: true, offline: true };
-            }
-        }
+    <label for="familyNames">Family members (comma-separated names)</label>
+    <input id="familyNames" name="familyNames" placeholder="e.g., Jane Doe, Alex Doe" />
 
-        // Replace your syncToGoogleSheets function with this enhanced version:
+    <div style="margin-top:1rem; display:flex; gap:.5rem;">
+      <button type="submit">Submit attendance</button>
+      <button type="button" id="btnLoadMembers">Load members</button>
+    </div>
 
-        async function bettersyncToGoogleSheets(attendanceRecord, memberRecord) {
-            if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                try {
-                    console.log('🚀 Starting sync to Google Sheets...');
-                    console.log('📤 Attendance Record:', attendanceRecord);
-                    console.log('👤 Member Record:', memberRecord);
-                    
-                    const payload = {
-                        action: 'addAttendance',
-                        attendanceData: attendanceRecord,
-                        memberData: memberRecord
-                    };
-                    
-                    console.log('📦 Sending payload:', JSON.stringify(payload, null, 2));
-                    console.log('🌐 URL:', GOOGLE_SHEETS_CONFIG.SCRIPT_URL);
-                    
-                    const response = await fetch(GOOGLE_SHEETS_CONFIG.SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(payload),
-                        // Remove mode: 'no-cors' to allow reading the response
-                    });
-                    
-                    console.log('📊 Response status:', response.status);
-                    console.log('📊 Response headers:', [...response.headers.entries()]);
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    
-                    const responseText = await response.text();
-                    console.log('📝 Raw response:', responseText);
-                    
-                    let result;
-                    try {
-                        result = JSON.parse(responseText);
-                        console.log('✅ Parsed response:', result);
-                    } catch (parseError) {
-                        console.error('❌ Failed to parse response as JSON:', parseError);
-                        // If we can't parse but got a 200, assume success
-                        if (response.status === 200) {
-                            console.log('✅ Assuming success based on 200 status');
-                            return { success: true, message: 'Data sent successfully (response not parseable)' };
-                        }
-                        throw new Error('Invalid response format');
-                    }
-                    
-                    if (result.success) {
-                        console.log('🎉 Successfully synced to Google Sheets!');
-                        return { success: true, message: result.message };
-                    } else {
-                        console.error('❌ Google Sheets reported error:', result.error);
-                        throw new Error(result.error || 'Unknown error from Google Sheets');
-                    }
-                    
-                } catch (error) {
-                    console.error('💥 Sync failed:', error);
-                    console.error('📋 Error details:', {
-                        name: error.name,
-                        message: error.message,
-                        stack: error.stack
-                    });
-                    
-                    // Store for later sync if enabled
-                    if (GOOGLE_SHEETS_CONFIG.USE_OFFLINE_STORAGE) {
-                        console.log('💾 Storing for later sync...');
-                        syncPending.push({ 
-                            attendanceRecord, 
-                            memberRecord, 
-                            timestamp: new Date().toISOString(),
-                            error: error.message 
-                        });
-                        localStorage.setItem('pendingSync', JSON.stringify(syncPending));
-                        updateStatusIndicators();
-                    }
-                    
-                    return { success: false, error: error.message };
-                }
-            } else {
-                console.log('⚠️ Google Sheets not configured - using localStorage only');
-                return { success: true, offline: true };
-            }
-        }
+    <p id="status" class="muted" style="margin-top:1rem;"></p>
+  </form>
 
-        // Replace your entire syncToGoogleSheets function with this CORS-free version:
+  <div class="panel">
+    <h2>Known Members (from sheet)</h2>
+    <ul id="memberList"></ul>
+  </div>
 
-    function syncToGoogleSheets(attendanceRecord, memberRecord) {
-        if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-            return new Promise((resolve) => {
-                console.log('🚀 Starting CORS-free sync to Google Sheets...');
-                console.log('📤 Attendance Record:', attendanceRecord);
-                console.log('👤 Member Record:', memberRecord);
-                
-                try {
-                    // Create a hidden form
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = GOOGLE_SHEETS_CONFIG.SCRIPT_URL;
-                    form.target = '_blank'; // Opens in new tab (optional)
-                    form.style.display = 'none';
-                    
-                    // Add the action field
-                    const actionField = document.createElement('input');
-                    actionField.type = 'hidden';
-                    actionField.name = 'action';
-                    actionField.value = 'addAttendance';
-                    form.appendChild(actionField);
-                    
-                    // Add attendance data
-                    const attendanceField = document.createElement('input');
-                    attendanceField.type = 'hidden';
-                    attendanceField.name = 'attendanceData';
-                    attendanceField.value = JSON.stringify(attendanceRecord);
-                    form.appendChild(attendanceField);
-                    
-                    // Add member data
-                    const memberField = document.createElement('input');
-                    memberField.type = 'hidden';
-                    memberField.name = 'memberData';
-                    memberField.value = JSON.stringify(memberRecord);
-                    form.appendChild(memberField);
-                    
-                    // Add form to page and submit
-                    document.body.appendChild(form);
-                    
-                    console.log('📤 Submitting form to Google Sheets...');
-                    form.submit();
-                    
-                    // Clean up - remove form after a short delay
-                    setTimeout(() => {
-                        if (document.body.contains(form)) {
-                            document.body.removeChild(form);
-                        }
-                    }, 1000);
-                    
-                    console.log('✅ Form submitted successfully (CORS-free)');
-                    resolve({ success: true, message: 'Data submitted via form (CORS-free)' });
-                    
-                } catch (error) {
-                    console.error('💥 Form submission failed:', error);
-                    
-                    // Store for later sync if enabled
-                    if (GOOGLE_SHEETS_CONFIG.USE_OFFLINE_STORAGE) {
-                        console.log('💾 Storing for later sync...');
-                        syncPending.push({ 
-                            attendanceRecord, 
-                            memberRecord, 
-                            timestamp: new Date().toISOString(),
-                            error: error.message 
-                        });
-                        localStorage.setItem('pendingSync', JSON.stringify(syncPending));
-                        updateStatusIndicators();
-                    }
-                    
-                    resolve({ success: false, error: error.message });
-                }
-            });
-        } else {
-            console.log('⚠️ Google Sheets not configured - using localStorage only');
-            return Promise.resolve({ success: true, offline: true });
-        }
+  <script>
+    // === CONFIG ===
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOCSNQczLRu6zLRKq0wSiCLo-8HI_Y11mDEqht0Qh7fbi2hbhO7eb_YayeppJj6pm32Q/exec';
+    document.getElementById('endpoint').textContent = SCRIPT_URL;
+
+    // Helpers
+    const post = async (payloadObj) => {
+      // URL-encoded body to avoid CORS preflight
+      const form = new URLSearchParams();
+      form.append('payload', JSON.stringify(payloadObj));
+
+      const res = await fetch(SCRIPT_URL, { method: 'POST', body: form });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    };
+
+    const $status = document.getElementById('status');
+    const setStatus = (msg, cls='muted') => {
+      $status.className = cls;
+      $status.textContent = msg;
+    };
+
+    // Load members
+    async function loadMembers() {
+      setStatus('Loading members…');
+      try {
+        const result = await post({ action: 'getMembers' });
+        if (!result.success) throw new Error(result.error || 'Unknown error');
+        const list = document.getElementById('memberList');
+        list.innerHTML = '';
+        result.members.forEach(m => {
+          const li = document.createElement('li');
+          li.textContent = m.name + (m.ageCategory ? ` — ${m.ageCategory}` : '');
+          list.appendChild(li);
+        });
+        setStatus(`Loaded ${result.members.length} members.`, 'ok');
+      } catch (err) {
+        console.error(err);
+        setStatus('Failed to load members: ' + err.message, 'err');
+      }
     }
 
-    // Alternative invisible iframe method (even more invisible)
-    function syncToGoogleSheetsIframe(attendanceRecord, memberRecord) {
-        if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-            return new Promise((resolve) => {
-                console.log('🚀 Starting iframe sync to Google Sheets...');
-                
-                try {
-                    // Create hidden iframe
-                    const iframe = document.createElement('iframe');
-                    iframe.style.display = 'none';
-                    iframe.style.width = '0';
-                    iframe.style.height = '0';
-                    iframe.style.border = 'none';
-                    document.body.appendChild(iframe);
-                    
-                    // Create form inside iframe
-                    const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                    iframeDoc.open();
-                    iframeDoc.write(`
-                        <html>
-                        <body>
-                            <form id="dataForm" method="POST" action="${GOOGLE_SHEETS_CONFIG.SCRIPT_URL}">
-                                <input type="hidden" name="action" value="addAttendance">
-                                <input type="hidden" name="attendanceData" value='${JSON.stringify(attendanceRecord)}'>
-                                <input type="hidden" name="memberData" value='${JSON.stringify(memberRecord)}'>
-                            </form>
-                            <script>
-                                document.getElementById('dataForm').submit();
-                            </script>
-                        </body>
-                        </html>
-                    `);
-                    iframeDoc.close();
-                    
-                    // Clean up iframe after submission
-                    setTimeout(() => {
-                        if (document.body.contains(iframe)) {
-                            document.body.removeChild(iframe);
-                        }
-                    }, 2000);
-                    
-                    console.log('✅ Data submitted via iframe (CORS-free)');
-                    resolve({ success: true, message: 'Data submitted via iframe (CORS-free)' });
-                    
-                } catch (error) {
-                    console.error('💥 Iframe submission failed:', error);
-                    resolve({ success: false, error: error.message });
-                }
-            });
-        } else {
-            return Promise.resolve({ success: true, offline: true });
-        }
+    // Submit attendance
+    async function submitAttendance(e) {
+      e.preventDefault();
+      setStatus('Submitting attendance…');
+
+      const name = document.getElementById('name').value.trim();
+      const ageCategory = document.getElementById('ageCategory').value;
+      const contactInfo = document.getElementById('contact').value.trim();
+      const date = document.getElementById('date').value;
+      const time = document.getElementById('time').value;
+      const isVisitor = document.getElementById('isVisitor').value === 'true';
+      const visitorStatus = document.getElementById('visitorStatus').value || '';
+      const familyMembers = document.getElementById('familyNames').value
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const attendanceData = {
+        timestamp: new Date().toISOString(),
+        id: crypto.randomUUID(),
+        name,
+        ageCategory,
+        contactInfo,
+        date,
+        time,
+        isVisitor,
+        visitorStatus,
+        withFamily: familyMembers.length > 0,
+        familyMembers
+      };
+
+      const memberData = {
+        name,
+        ageCategory,
+        contactInfo,
+        family: familyMembers,
+        firstVisit: isVisitor && visitorStatus === 'first_time' ? date : '',
+        totalVisits: 1
+      };
+
+      try {
+        const result = await post({
+          action: 'addAttendance',
+          attendanceData,
+          memberData
+        });
+        if (!result.success) throw new Error(result.error || 'Unknown error');
+        setStatus('Attendance recorded successfully.', 'ok');
+        e.target.reset();
+        document.getElementById('date').value = new Date().toISOString().slice(0,10);
+      } catch (err) {
+        console.error(err);
+        setStatus('Failed to submit: ' + err.message, 'err');
+      }
     }
 
-    // Updated test function using the CORS-free method
-    async function testGoogleSheetsConnection() {
-        console.log('🧪 Testing CORS-free Google Sheets connection...');
-        
-        const testRecord = {
-            id: Date.now(),
-            name: "CORS-Free Test",
-            ageCategory: "adult",
-            contactInfo: "corstest@website.com",
-            date: new Date().toISOString().split('T')[0],
-            time: new Date().toTimeString().split(' ')[0],
-            isVisitor: true,
-            visitorStatus: "first_time",
-            withFamily: false,
-            familyMembers: [],
-            timestamp: new Date().toISOString()
-        };
-        
-        const testMember = {
-            name: "CORS-Free Test",
-            ageCategory: "adult",
-            contactInfo: "corstest@website.com",
-            family: [],
-            firstVisit: new Date().toISOString(),
-            totalVisits: 1
-        };
-        
-        const result = await syncToGoogleSheets(testRecord, testMember);
-        console.log('🧪 Test result:', result);
-        
-        // Also test iframe method
-        console.log('🧪 Testing iframe method...');
-        const iframeResult = await syncToGoogleSheetsIframe(testRecord, testMember);
-        console.log('🧪 Iframe test result:', iframeResult);
-        
-        return result;
-    }
+    document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
+    document.getElementById('btnLoadMembers').addEventListener('click', loadMembers);
 
-        async function emailReport(reportType, startDate, endDate, email = null) {
-            if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                try {
-                    const response = await fetch(GOOGLE_SHEETS_CONFIG.SCRIPT_URL, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            action: 'emailReport',
-                            reportType: reportType,
-                            startDate: startDate,
-                            endDate: endDate,
-                            email: email
-                        })
-                    });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        showMessage(result.message, 'success');
-                    } else {
-                        throw new Error(result.error);
-                    }
-                } catch (error) {
-                    console.error('Failed to send email report:', error);
-                    showMessage('Failed to send email report: ' + error.message, 'error');
-                }
-            } else {
-                showMessage('Google Sheets not configured - cannot send email reports', 'error');
-            }
-        }
-
-        async function syncPendingRecords() {
-            if (syncPending.length > 0 && isOnline) {
-                const syncCount = syncPending.length;
-                const syncedRecords = [];
-                
-                for (const pending of syncPending) {
-                    const result = await syncToGoogleSheets(pending.attendanceRecord, pending.memberRecord);
-                    if (result.success) {
-                        syncedRecords.push(pending);
-                    }
-                }
-                
-                // Remove successfully synced records
-                syncPending = syncPending.filter(pending => !syncedRecords.includes(pending));
-                localStorage.setItem('pendingSync', JSON.stringify(syncPending));
-                
-                if (syncedRecords.length > 0) {
-                    showMessage(`Synced ${syncedRecords.length} pending records to Google Sheets`, 'success');
-                }
-            }
-        }
-
-        // Initialize form handlers
-        document.getElementById('attendanceForm').addEventListener('submit', handleSubmit);
-        document.getElementById('memberName').addEventListener('input', handleNameInput);
-        document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
-        document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
-        document.getElementById('ageAdult').addEventListener('change', toggleContactSection);
-        document.getElementById('ageChild').addEventListener('change', toggleContactSection);
-        document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
-
-        function handleNameInput(e) {
-            const query = e.target.value.toLowerCase().trim();
-            const suggestions = document.getElementById('suggestions');
-            
-            if (query.length < 2) {
-                suggestions.style.display = 'none';
-                return;
-            }
-
-            const matches = memberDatabase.filter(member => 
-                member.name.toLowerCase().includes(query) ||
-                member.name.toLowerCase().startsWith(query)
-            ).slice(0, 5);
-
-            if (matches.length > 0) {
-                suggestions.innerHTML = matches.map(member => 
-                    `<div class="suggestion-item" onclick="selectMember('${member.name}')">${member.name}</div>`
-                ).join('');
-                suggestions.style.display = 'block';
-            } else {
-                suggestions.style.display = 'none';
-            }
-        }
-
-        function selectMember(name) {
-            document.getElementById('memberName').value = name;
-            document.getElementById('suggestions').style.display = 'none';
-            
-            // Load member data if they exist
-            const member = memberDatabase.find(m => m.name === name);
-            if (member) {
-                // Set age category
-                if (member.ageCategory) {
-                    document.getElementById(member.ageCategory === 'adult' ? 'ageAdult' : 'ageChild').checked = true;
-                    toggleContactSection();
-                }
-                
-                // Set contact info
-                if (member.contactInfo) {
-                    document.getElementById('contactInfo').value = member.contactInfo;
-                }
-                
-                // Load family members if they exist
-                if (member.family && member.family.length > 0) {
-                    loadFamilyMembers(member.family);
-                }
-            }
-        }
-
-        function loadFamilyMembers(family) {
-            const familyContainer = document.getElementById('familyMembers');
-            familyContainer.innerHTML = family.map((familyMember, index) => {
-                const ageLabel = familyMember.ageCategory === 'adult' ? '👤' : '👶';
-                const contactInfo = familyMember.contactInfo ? ` (${familyMember.contactInfo})` : '';
-                return `<div class="family-member">
-                    <input type="checkbox" id="family_${index}" name="familyMember" value="${familyMember.name}" data-age="${familyMember.ageCategory}" data-contact="${familyMember.contactInfo || ''}">
-                    <label for="family_${index}">${ageLabel} ${familyMember.name}${contactInfo}</label>
-                </div>`;
-            }).join('');
-        }
-
-        function toggleContactSection() {
-            const isAdult = document.getElementById('ageAdult').checked;
-            const contactSection = document.getElementById('contactSection');
-            contactSection.style.display = isAdult ? 'block' : 'none';
-            
-            if (!isAdult) {
-                document.getElementById('contactInfo').value = '';
-            }
-        }
-
-        function toggleFamilyContactField() {
-            const isAdult = document.getElementById('newFamilyAge').value === 'adult';
-            const contactField = document.getElementById('newFamilyContact');
-            contactField.style.display = isAdult ? 'block' : 'none';
-            
-            if (!isAdult) {
-                contactField.value = '';
-            }
-        }
-
-        function toggleFamilySection() {
-            const familySection = document.getElementById('familySection');
-            const isChecked = document.getElementById('withFamily').checked;
-            familySection.style.display = isChecked ? 'block' : 'none';
-        }
-
-        function toggleVisitorSection() {
-            const visitorSection = document.getElementById('visitorSection');
-            const isChecked = document.getElementById('isVisitor').checked;
-            visitorSection.style.display = isChecked ? 'block' : 'none';
-        }
-
-        function addFamilyMember() {
-            const nameInput = document.getElementById('newFamilyMember');
-            const ageSelect = document.getElementById('newFamilyAge');
-            const contactInput = document.getElementById('newFamilyContact');
-            
-            const name = nameInput.value.trim();
-            const ageCategory = ageSelect.value;
-            const contactInfo = contactInput.value.trim();
-            
-            if (name) {
-                const familyContainer = document.getElementById('familyMembers');
-                const newMember = document.createElement('div');
-                newMember.className = 'family-member';
-                
-                const ageLabel = ageCategory === 'adult' ? '👤' : '👶';
-                const contactDisplay = (ageCategory === 'adult' && contactInfo) ? ` (${contactInfo})` : '';
-                
-                newMember.innerHTML = `
-                    <input type="checkbox" id="family_new_${name}" name="familyMember" value="${name}" data-age="${ageCategory}" data-contact="${contactInfo}" checked>
-                    <label for="family_new_${name}">${ageLabel} ${name}${contactDisplay}</label>
-                `;
-                familyContainer.appendChild(newMember);
-                
-                // Clear inputs
-                nameInput.value = '';
-                contactInput.value = '';
-                ageSelect.value = 'adult';
-                toggleFamilyContactField();
-            }
-        }
-
-        async function handleSubmit(e) {
-            e.preventDefault();
-            
-            const name = document.getElementById('memberName').value.trim();
-            if (!name) {
-                showMessage('Please enter your name', 'error');
-                return;
-            }
-
-            const ageCategory = document.querySelector('input[name="ageCategory"]:checked').value;
-            const contactInfo = document.getElementById('contactInfo').value.trim();
-            
-            // Validate adult contact info
-            if (ageCategory === 'adult' && !contactInfo) {
-                showMessage('Please provide contact information for adults', 'error');
-                return;
-            }
-
-            const isVisitor = document.getElementById('isVisitor').checked;
-            const withFamily = document.getElementById('withFamily').checked;
-            const today = new Date();
-            
-            // Check if this is a returning visitor
-            const lastAttendance = attendanceData
-                .filter(record => record.name === name)
-                .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-            
-            let visitorStatus = 'regular';
-            if (isVisitor) {
-                if (!lastAttendance) {
-                    visitorStatus = 'first_time';
-                } else {
-                    const daysSinceLastVisit = (today - new Date(lastAttendance.date)) / (1000 * 60 * 60 * 24);
-                    if (daysSinceLastVisit > 42) { // 6 weeks
-                        visitorStatus = 'been_a_while';
-                    } else {
-                        visitorStatus = 'returning_visitor';
-                    }
-                }
-            }
-
-            // Collect family members with their details
-            const familyMembers = [];
-            if (withFamily) {
-                const checkedFamily = document.querySelectorAll('input[name="familyMember"]:checked');
-                checkedFamily.forEach(checkbox => {
-                    familyMembers.push({
-                        name: checkbox.value,
-                        ageCategory: checkbox.dataset.age || 'adult',
-                        contactInfo: checkbox.dataset.contact || ''
-                    });
-                });
-            }
-
-            // Create attendance record
-            const attendanceRecord = {
-                id: Date.now(),
-                name: name,
-                ageCategory: ageCategory,
-                contactInfo: contactInfo,
-                date: today.toISOString().split('T')[0],
-                time: today.toTimeString().split(' ')[0],
-                isVisitor: isVisitor,
-                visitorStatus: visitorStatus,
-                withFamily: withFamily,
-                familyMembers: familyMembers,
-                timestamp: today.toISOString()
-            };
-
-            // Add to attendance data
-            attendanceData.push(attendanceRecord);
-
-            // Update member database
-            let existingMember = memberDatabase.find(m => m.name === name);
-            if (!existingMember) {
-                existingMember = {
-                    name: name,
-                    ageCategory: ageCategory,
-                    contactInfo: contactInfo,
-                    family: familyMembers,
-                    firstVisit: today.toISOString(),
-                    totalVisits: 1
-                };
-                memberDatabase.push(existingMember);
-            } else {
-                // Update member info
-                existingMember.ageCategory = ageCategory;
-                existingMember.contactInfo = contactInfo;
-                
-                // Update family list with any new members
-                familyMembers.forEach(newFamilyMember => {
-                    const existingFamilyMember = existingMember.family.find(f => f.name === newFamilyMember.name);
-                    if (!existingFamilyMember) {
-                        existingMember.family.push(newFamilyMember);
-                    } else {
-                        // Update existing family member info
-                        existingFamilyMember.ageCategory = newFamilyMember.ageCategory;
-                        existingFamilyMember.contactInfo = newFamilyMember.contactInfo;
-                    }
-                });
-                existingMember.totalVisits = (existingMember.totalVisits || 1) + 1;
-            }
-
-            // Save to localStorage (backup)
-            localStorage.setItem('churchAttendance', JSON.stringify(attendanceData));
-            localStorage.setItem('churchMembers', JSON.stringify(memberDatabase));
-
-            // Sync to Google Sheets
-            const syncResult = await syncToGoogleSheets(attendanceRecord, existingMember);
-            
-            // Show success message
-            let message = `Welcome, ${name}! `;
-            if (isVisitor) {
-                if (visitorStatus === 'first_time') {
-                    message += "We're so glad you're visiting us for the first time! 🎉";
-                } else if (visitorStatus === 'been_a_while') {
-                    message += "Great to see you back after a while! 😊";
-                } else {
-                    message += "Thanks for visiting us again! 🙏";
-                }
-            } else {
-                message += "You're checked in! 📝";
-            }
-            
-            if (familyMembers.length > 0) {
-                const familyNames = familyMembers.map(f => `${f.name} (${f.ageCategory})`).join(', ');
-                message += ` Family: ${familyNames}`;
-            }
-
-            // Add sync status to message
-            if (syncResult.success && !syncResult.offline) {
-                message += " ✅ Synced to Google Sheets";
-            } else if (syncResult.offline) {
-                message += " 💾 Saved locally";
-            } else {
-                message += " ⚠️ Saved locally, will sync when online";
-            }
-
-            showMessage(message, 'success');
-
-            // Reset form
-            resetForm();
-        }
-
-        function resetForm() {
-            document.getElementById('attendanceForm').reset();
-            document.getElementById('ageAdult').checked = true; // Default to adult
-            document.getElementById('familySection').style.display = 'none';
-            document.getElementById('visitorSection').style.display = 'none';
-            document.getElementById('contactSection').style.display = 'block'; // Show contact for default adult
-            document.getElementById('familyMembers').innerHTML = '';
-            document.getElementById('suggestions').style.display = 'none';
-            document.getElementById('newFamilyAge').value = 'adult';
-            toggleFamilyContactField();
-        }
-
-        function showMessage(message, type) {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 5000);
-        }
-
-        async function exportToday() {
-            const today = new Date().toISOString().split('T')[0];
-            
-            // Try to email report first
-            if (confirm('Would you like to email today\'s attendance report?')) {
-                const email = prompt('Enter email address (leave blank to use default admin email):');
-                await emailReport('Daily', today, today, email || null);
-            } else {
-                // Fallback to download
-                const todayRecords = attendanceData.filter(record => record.date === today);
-                exportToExcel(todayRecords, `Church_Attendance_${today}.xlsx`);
-            }
-        }
-
-        async function exportWeekly() {
-            const today = new Date();
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            
-            const startDate = oneWeekAgo.toISOString().split('T')[0];
-            const endDate = today.toISOString().split('T')[0];
-            
-            // Try to email report first
-            if (confirm('Would you like to email this week\'s attendance report?')) {
-                const email = prompt('Enter email address (leave blank to use default admin email):');
-                await emailReport('Weekly', startDate, endDate, email || null);
-            } else {
-                // Fallback to download
-                const weeklyRecords = attendanceData.filter(record => 
-                    new Date(record.date) >= oneWeekAgo
-                );
-                exportToExcel(weeklyRecords, `Church_Attendance_Weekly_${endDate}.xlsx`);
-            }
-        }
-
-        function exportToExcel(data, filename) {
-            if (data.length === 0) {
-                showMessage('No data to export for the selected period', 'error');
-                return;
-            }
-
-            // Convert to CSV format
-            const headers = ['Name', 'Age Category', 'Contact Info', 'Date', 'Time', 'Visitor Status', 'With Family', 'Family Members'];
-            const csvContent = [
-                headers.join(','),
-                ...data.map(record => [
-                    record.name,
-                    record.ageCategory || 'adult',
-                    record.contactInfo || '',
-                    record.date,
-                    record.time,
-                    record.isVisitor ? record.visitorStatus : 'Regular Member',
-                    record.withFamily ? 'Yes' : 'No',
-                    record.familyMembers.map(f => typeof f === 'string' ? f : `${f.name} (${f.ageCategory})`).join('; ')
-                ].map(field => `"${field}"`).join(','))
-            ].join('\n');
-
-            // Download file
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename.replace('.xlsx', '.csv');
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-
-            showMessage(`Exported ${data.length} records to ${filename.replace('.xlsx', '.csv')}`, 'success');
-        }
-
-        function viewAllData() {
-            const dataWindow = window.open('', '_blank');
-            dataWindow.document.write(`
-                <html>
-                <head><title>All Attendance Data</title></head>
-                <body style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2>All Attendance Records</h2>
-                <table border="1" style="border-collapse: collapse; width: 100%;">
-                <tr>
-                    <th>Name</th><th>Age</th><th>Contact</th><th>Date</th><th>Time</th><th>Visitor Status</th><th>With Family</th><th>Family Members</th>
-                </tr>
-                ${attendanceData.map(record => `
-                    <tr>
-                        <td>${record.name}</td>
-                        <td>${record.ageCategory || 'adult'}</td>
-                        <td>${record.contactInfo || ''}</td>
-                        <td>${record.date}</td>
-                        <td>${record.time}</td>
-                        <td>${record.isVisitor ? record.visitorStatus : 'Regular Member'}</td>
-                        <td>${record.withFamily ? 'Yes' : 'No'}</td>
-                        <td>${record.familyMembers.map(f => typeof f === 'string' ? f : `${f.name} (${f.ageCategory})`).join(', ')}</td>
-                    </tr>
-                `).join('')}
-                </table>
-                </body>
-                </html>
-            `);
-        }
-
-        function clearAllData() {
-            if (confirm('Are you sure you want to clear all attendance data? This cannot be undone.')) {
-                localStorage.removeItem('churchAttendance');
-                localStorage.removeItem('churchMembers');
-                localStorage.removeItem('pendingSync');
-                attendanceData = [];
-                memberDatabase = [];
-                syncPending = [];
-                showMessage('All data cleared successfully', 'success');
-                updateStatusIndicators();
-            }
-        }
-
-        // Close suggestions when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.input-container')) {
-                document.getElementById('suggestions').style.display = 'none';
-            }
-        });
-
-        // Sample data for testing
-        function initializeSampleData() {
-            if (attendanceData.length === 0) {
-                const sampleMembers = [
-                    { 
-                        name: 'John Smith', 
-                        ageCategory: 'adult',
-                        contactInfo: '555-0123',
-                        family: [
-                            { name: 'Mary Smith', ageCategory: 'adult', contactInfo: '555-0124' },
-                            { name: 'Tommy Smith', ageCategory: 'child', contactInfo: '' }
-                        ], 
-                        firstVisit: '2024-01-15', 
-                        totalVisits: 45 
-                    },
-                    { 
-                        name: 'Sarah Johnson', 
-                        ageCategory: 'adult',
-                        contactInfo: 'sarah@email.com',
-                        family: [
-                            { name: 'Mike Johnson', ageCategory: 'adult', contactInfo: 'mike@email.com' },
-                            { name: 'Emma Johnson', ageCategory: 'child', contactInfo: '' }
-                        ], 
-                        firstVisit: '2023-06-10', 
-                        totalVisits: 72 
-                    },
-                    { 
-                        name: 'David Brown', 
-                        ageCategory: 'adult',
-                        contactInfo: '555-0199',
-                        family: [], 
-                        firstVisit: '2024-03-20', 
-                        totalVisits: 23 
-                    },
-                    { 
-                        name: 'Lisa Wilson', 
-                        ageCategory: 'adult',
-                        contactInfo: 'lisa.wilson@email.com',
-                        family: [
-                            { name: 'James Wilson', ageCategory: 'adult', contactInfo: '555-0156' }
-                        ], 
-                        firstVisit: '2023-12-05', 
-                        totalVisits: 34 
-                    }
-                ];
-                
-                memberDatabase = sampleMembers;
-                localStorage.setItem('churchMembers', JSON.stringify(memberDatabase));
-                console.log('Sample data initialized');
-            }
-        }
-
-        // Initialize sample data on page load
-        initializeSampleData();
-
-        // Initialize contact section visibility
-        toggleContactSection();
-        toggleFamilyContactField();
-
-        // Load members from Google Sheets on startup
-        loadMembersFromGoogleSheets();
-
-        // Update status indicators
-        function updateStatusIndicators() {
-            const setupStatus = document.getElementById('setupStatus');
-            const connectionStatus = document.getElementById('connectionStatus');
-            const pendingCount = document.getElementById('pendingCount');
-
-            // Setup status
-            if (GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
-                setupStatus.innerHTML = '<span style="color: #856404;">⚠️ Google Sheets not configured - using local storage only</span>';
-            } else {
-                setupStatus.innerHTML = '<span style="color: #155724;">✅ Google Sheets configured and ready</span>';
-            }
-
-            // Connection status
-            connectionStatus.innerHTML = isOnline ? 
-                '<span style="color: #155724;">🟢 Online</span>' : 
-                '<span style="color: #721c24;">🔴 Offline</span>';
-
-            // Pending sync count
-            pendingCount.textContent = syncPending.length;
-        }
-
-        // Monitor online/offline status
-        window.addEventListener('online', () => {
-            isOnline = true;
-            updateStatusIndicators();
-            syncPendingRecords();
-            showMessage('🟢 Back online! Syncing pending records...', 'success');
-        });
-
-        window.addEventListener('offline', () => {
-            isOnline = false;
-            updateStatusIndicators();
-            showMessage('🔴 Offline mode - data will be saved locally', 'error');
-        });
-
-        // Initial status update
-        setTimeout(updateStatusIndicators, 1000);
-
-        // Auto-sync pending records every 5 minutes when online
-        setInterval(() => {
-            if (isOnline && syncPending.length > 0) {
-                syncPendingRecords();
-            }
-            updateStatusIndicators();
-        }, 5 * 60 * 1000);
-    </script>
+    // Prefill date/time, attempt member load on start
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('date').value = new Date().toISOString().slice(0,10);
+      const now = new Date();
+      document.getElementById('time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+      loadMembers().catch(()=>{});
+    });
+  </script>
 </body>
 </html>
