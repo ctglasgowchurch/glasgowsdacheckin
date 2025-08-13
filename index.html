@@ -449,7 +449,7 @@
         }
 
         // Alternative: Use JSONP for GET requests
-        async function loadMembersFromGoogleSheetsJSONP() {
+        async function loadMembersFromGoogleSheets() {
             if (!GOOGLE_SHEETS_CONFIG.SCRIPT_URL.includes('YOUR_SCRIPT_ID')) {
                 return new Promise((resolve, reject) => {
                     const script = document.createElement('script');
