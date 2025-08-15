@@ -779,7 +779,8 @@
             SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbw8Dviuzxz8j1hkqSZnLsWnsWCHPQ7K2Ft2qOG-OUWTDaqKfww0JAugFBftGIz1iZG0vQ/exec',
             ADMIN_PASSWORD: 'glasgow2025',
             MAX_RETRIES: 3,
-            RETRY_DELAY: 2000
+            RETRY_DELAY: 2000,
+            REQUEST_TIMEOUT: 30000
         };
 
         // === STATE MANAGEMENT ===
@@ -788,32 +789,54 @@
             allIndividuals: [],
             attendanceSession: null,
             isAdminAuthenticated: false,
-            isLoading: false
+            isLoading: false,
+            pendingCallbacks: new Map()
         };
 
-        // === JSONP API (NO CORS REQUIRED) ===
+        // === PURE JSONP API (ZERO CORS DEPENDENCY) ===
         const api = {
-            // JSONP request - completely bypasses CORS
-            jsonpRequest(payload) {
+            // Generate unique callback names
+            generateCallbackName() {
+                return 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            },
+
+            // Pure JSONP request - completely bypasses CORS
+            jsonpRequest(payload, timeout = CONFIG.REQUEST_TIMEOUT) {
                 return new Promise((resolve, reject) => {
-                    const callbackName = 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    const callbackName = this.generateCallbackName();
+                    let script = null;
+                    let timeoutId = null;
                     
-                    // Create script element
-                    const script = document.createElement('script');
+                    // Cleanup function
+                    const cleanup = () => {
+                        if (script && script.parentNode) {
+                            script.parentNode.removeChild(script);
+                        }
+                        if (window[callbackName]) {
+                            delete window[callbackName];
+                        }
+                        if (timeoutId) {
+                            clearTimeout(timeoutId);
+                        }
+                        state.pendingCallbacks.delete(callbackName);
+                    };
                     
-                    // Set up callback function
+                    // Store callback for potential cleanup
+                    state.pendingCallbacks.set(callbackName, cleanup);
+                    
+                    // Set up global callback function
                     window[callbackName] = (data) => {
-                        // Cleanup
-                        document.head.removeChild(script);
-                        delete window[callbackName];
+                        cleanup();
                         resolve(data);
                     };
                     
-                    // Handle errors
+                    // Create and configure script element
+                    script = document.createElement('script');
+                    
+                    // Handle script errors
                     script.onerror = () => {
-                        document.head.removeChild(script);
-                        delete window[callbackName];
-                        reject(new Error('JSONP request failed'));
+                        cleanup();
+                        reject(new Error('JSONP script failed to load'));
                     };
                     
                     // Build URL with parameters
@@ -821,42 +844,66 @@
                     params.append('payload', JSON.stringify(payload));
                     params.append('callback', callbackName);
                     
+                    // Set script source and append to head
                     script.src = `${CONFIG.SCRIPT_URL}?${params}`;
-                    document.head.appendChild(script);
+                    script.async = true;
+                    script.defer = true;
                     
-                    // Timeout after 15 seconds
-                    setTimeout(() => {
-                        if (window[callbackName]) {
-                            document.head.removeChild(script);
-                            delete window[callbackName];
-                            reject(new Error('Request timeout'));
-                        }
-                    }, 15000);
+                    // Set timeout
+                    timeoutId = setTimeout(() => {
+                        cleanup();
+                        reject(new Error(`Request timeout after ${timeout}ms`));
+                    }, timeout);
+                    
+                    // Add script to document
+                    document.head.appendChild(script);
                 });
             },
 
-            // Main API call method with retry logic
+            // Main API call method with enhanced retry logic
             async call(payload, retries = CONFIG.MAX_RETRIES) {
-                try {
-                    console.log('API Call:', payload.action);
-                    const result = await this.jsonpRequest(payload);
-                    console.log('API Response:', result);
-                    return result;
-                } catch (error) {
-                    console.error('API Error:', error);
-                    
-                    if (retries > 0) {
-                        console.log(`Retrying... ${CONFIG.MAX_RETRIES - retries + 1}/${CONFIG.MAX_RETRIES}`);
-                        await this.delay(CONFIG.RETRY_DELAY);
-                        return this.call(payload, retries - 1);
+                const startTime = Date.now();
+                
+                for (let attempt = 0; attempt <= retries; attempt++) {
+                    try {
+                        console.log(`API Call (attempt ${attempt + 1}/${retries + 1}):`, payload.action);
+                        
+                        const result = await this.jsonpRequest(payload);
+                        
+                        console.log(`API Response (${Date.now() - startTime}ms):`, result);
+                        
+                        // Validate response structure
+                        if (typeof result !== 'object' || result === null) {
+                            throw new Error('Invalid response format');
+                        }
+                        
+                        return result;
+                        
+                    } catch (error) {
+                        console.error(`API Error (attempt ${attempt + 1}):`, error);
+                        
+                        // Don't retry on last attempt
+                        if (attempt === retries) {
+                            throw new Error(`API call failed after ${retries + 1} attempts: ${error.message}`);
+                        }
+                        
+                        // Progressive backoff delay
+                        const delay = CONFIG.RETRY_DELAY * Math.pow(2, attempt);
+                        console.log(`Retrying in ${delay}ms...`);
+                        await this.delay(delay);
                     }
-                    
-                    throw error;
                 }
             },
 
+            // Delay utility
             delay(ms) {
                 return new Promise(resolve => setTimeout(resolve, ms));
+            },
+
+            // Cleanup any pending requests
+            cleanup() {
+                state.pendingCallbacks.forEach(cleanup => cleanup());
+                state.pendingCallbacks.clear();
             }
         };
 
@@ -953,11 +1000,19 @@
             ui.showLoading();
             
             try {
-                // Load members and check session status
-                const [membersLoaded, sessionOpen] = await Promise.all([
+                // Load members and check session status in parallel
+                const [membersResult, sessionResult] = await Promise.allSettled([
                     loadMembers(),
                     checkSessionStatus()
                 ]);
+
+                // Handle results
+                const membersLoaded = membersResult.status === 'fulfilled' && membersResult.value;
+                const sessionOpen = sessionResult.status === 'fulfilled' && sessionResult.value;
+
+                if (!membersLoaded) {
+                    console.warn('Failed to load members:', membersResult.reason);
+                }
 
                 if (sessionOpen) {
                     ui.showForm();
@@ -1649,6 +1704,11 @@
                     closeAdminModal();
                 }
             };
+
+            // Cleanup on page unload
+            window.addEventListener('beforeunload', () => {
+                api.cleanup();
+            });
 
             // Initialize form states
             toggleContactSection();
