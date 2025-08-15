@@ -1,1723 +1,1006 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Glasgow SDA Church - Check-In</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            color: #333;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            overflow: hidden;
-            position: relative;
-        }
-
-        .admin-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-weight: 600;
-            z-index: 100;
-            transition: all 0.3s ease;
-        }
-
-        .admin-btn:hover {
-            background: #c82333;
-            transform: translateY(-1px);
-        }
-
-        .header {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .event-type {
-            background: rgba(255, 255, 255, 0.2);
-            margin-top: 15px;
-            padding: 10px 20px;
-            border-radius: 25px;
-            font-size: 1.1em;
-            font-weight: 600;
-            display: inline-block;
-        }
-
-        .attendance-status {
-            background: rgba(255, 255, 255, 0.2);
-            margin-top: 10px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .loading-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 60px 40px;
-            text-align: center;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #e1e5e9;
-            border-top: 5px solid #4facfe;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-bottom: 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .attendance-closed {
-            background: #dc3545;
-            color: white;
-            padding: 20px;
-            margin: 20px;
-            border-radius: 12px;
-            text-align: center;
-        }
-
-        .attendance-closed h2 {
-            margin-bottom: 10px;
-        }
-
-        .form-container {
-            padding: 40px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: #555;
-            font-size: 1.1em;
-        }
-
-        .input-container {
-            position: relative;
-        }
-
-        input[type="text"], input[type="email"], input[type="tel"], select {
-            width: 100%;
-            padding: 15px 20px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 1.1em;
-            transition: all 0.3s ease;
-            background: #f8f9fa;
-        }
-
-        input[type="text"]:focus, input[type="email"]:focus, input[type="tel"]:focus, select:focus {
-            outline: none;
-            border-color: #4facfe;
-            background: white;
-            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1);
-        }
-
-        .suggestions {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: white;
-            border: 2px solid #e1e5e9;
-            border-top: none;
-            border-radius: 0 0 12px 12px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 1000;
-            display: none;
-        }
-
-        .suggestion-item {
-            padding: 12px 20px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .suggestion-item:hover {
-            background-color: #f8f9fa;
-        }
-
-        .suggestion-item:last-child {
-            border-bottom: none;
-        }
-
-        .checkbox-group {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .checkbox-group:hover {
-            background: #e9ecef;
-        }
-
-        .checkbox-group input[type="checkbox"], .checkbox-group input[type="radio"] {
-            width: 20px;
-            height: 20px;
-            margin-right: 12px;
-            cursor: pointer;
-        }
-
-        .checkbox-group label {
-            margin: 0;
-            cursor: pointer;
-            flex: 1;
-        }
-
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            margin-top: 10px;
-        }
-
-        .radio-group .checkbox-group {
-            margin-bottom: 0;
-            flex: 1;
-        }
-
-        .family-section, .visitor-section {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            background: #e8f4fd;
-            border-radius: 12px;
-            border-left: 4px solid #4facfe;
-        }
-
-        .family-member {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: white;
-            border-radius: 8px;
-            border: 1px solid #e1e5e9;
-        }
-
-        .family-member-info {
-            flex: 1;
-            margin-left: 10px;
-        }
-
-        .family-member-name {
-            font-weight: 600;
-            color: #333;
-        }
-
-        .family-member-details {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 2px;
-        }
-
-        .add-family-section {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            margin-top: 15px;
-            border: 2px dashed #4facfe;
-        }
-
-        .add-family-form {
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 15px;
-            align-items: end;
-        }
-
-        .family-contact-field {
-            grid-column: 1 / -1;
-            margin-top: 10px;
-        }
-
-        .family-name-container {
-            position: relative;
-        }
-
-        .same-contact-option {
-            margin-top: 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .same-contact-option input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-        }
-
-        .same-contact-option label {
-            font-size: 0.9em;
-            color: #666;
-            margin: 0;
-        }
-
-        .btn {
-            padding: 12px 25px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #5a6268;
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #56cc9d 0%, #6eaa5b 100%);
-            color: white;
-            font-size: 1.2em;
-            padding: 18px 40px;
-            width: 100%;
-            margin-top: 30px;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(86, 204, 157, 0.4);
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover:not(:disabled) {
-            background: #c82333;
-            transform: translateY(-2px);
-        }
-
-        .remove-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .remove-btn:hover {
-            background: #c82333;
-        }
-
-        .status-message {
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .status-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-
-        .status-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-
-        .status-info {
-            background: #d1ecf1;
-            color: #0c5460;
-            border: 1px solid #bee5eb;
-        }
-
-        .status-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
-        }
-
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid transparent;
-            border-top: 2px solid currentColor;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-left: 8px;
-        }
-
-        /* Modal Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-        }
-
-        .modal-content {
-            background-color: #fefefe;
-            margin: 5% auto;
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-            position: relative;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .modal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #e1e5e9;
-        }
-
-        .modal-header h2 {
-            color: #333;
-            margin: 0;
-        }
-
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-            cursor: pointer;
-            line-height: 1;
-        }
-
-        .close:hover {
-            color: #000;
-        }
-
-        .admin-section {
-            margin-bottom: 25px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-        }
-
-        .admin-section h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .admin-form {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .custom-event-input {
-            display: none;
-            margin-top: 10px;
-        }
-
-        .admin-status {
-            background: #e8f4fd;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid #4facfe;
-        }
-
-        .admin-status h4 {
-            margin-bottom: 10px;
-            color: #333;
-        }
-
-        .admin-status.closed {
-            background: #f8d7da;
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
-
-        .admin-status.open {
-            background: #d4edda;
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                margin: 10px;
-                border-radius: 15px;
-            }
-            
-            .header {
-                padding: 20px;
-            }
-            
-            .header h1 {
-                font-size: 2em;
-            }
-            
-            .form-container {
-                padding: 20px;
-            }
-
-            .radio-group {
-                flex-direction: column;
-                gap: 10px;
-            }
-
-            .add-family-form {
-                grid-template-columns: 1fr;
-            }
-
-            .modal-content {
-                margin: 10% auto;
-                padding: 20px;
-                width: 95%;
-            }
-
-            .admin-btn {
-                position: static;
-                margin-bottom: 10px;
-                width: 100%;
-            }
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glasgow SDA Church – Check‑In</title>
+
+  <!-- Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ======= Design tokens ======= */
+    :root{
+      --bg: #0b1020;
+      --bg-elev: #0f162d;
+      --card: #101729;
+      --text: #e6e8ee;
+      --muted: #9aa3b2;
+      --accent: #4f8cff;
+      --accent-2: #22d3ee;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --ring: rgba(79,140,255,.35);
+      --border: rgba(255,255,255,.08);
+      --shadow: 0 10px 24px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);
+      --radius-xl: 18px;
+      --radius-lg: 14px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --maxw: 860px;
+      --focus: 0 0 0 3px var(--ring);
+    }
+
+    * { box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1100px 600px at 10% -10%, rgba(79,140,255,.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 30%, rgba(34,211,238,.18), transparent 60%),
+        linear-gradient(180deg, #0a0f20, #0b1020 40%, #0a0f1e);
+      padding: 24px;
+      display:flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ======= Card layout ======= */
+    .container{
+      width:100%;
+      max-width: var(--maxw);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)) border-box, #0c1326;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+      isolation:isolate;
+    }
+
+    .header{
+      position: relative;
+      padding: 28px 28px 22px;
+      background:
+        radial-gradient(800px 300px at 0% 0%, rgba(34,211,238,.15), transparent 60%),
+        radial-gradient(800px 300px at 100% -10%, rgba(79,140,255,.25), transparent 60%);
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1{
+      font-size: clamp(20px, 5vw, 28px);
+      letter-spacing: .2px;
+      font-weight: 700;
+      margin:0 0 6px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .header p{
+      margin:0;
+      color: var(--muted);
+      font-weight:500;
+    }
+    .badges{
+      margin-top: 14px;
+      display:flex; gap:10px; flex-wrap: wrap;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      font-size: 13px; font-weight:600;
+    }
+    .chip .dot{ width:8px; height:8px; border-radius:50%; background: var(--success); box-shadow: 0 0 0 4px rgba(34,197,94,.15);}
+    .chip.closed .dot{ background: var(--danger); box-shadow: 0 0 0 4px rgba(239,68,68,.15);}
+
+    /* Floating Admin button */
+    .admin-btn{
+      position:absolute; top:18px; right:18px;
+      appearance:none; border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-weight: 700; letter-spacing:.2px;
+      cursor:pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .admin-btn:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); border-color: rgba(255,255,255,.18); }
+    .admin-btn:active{ transform: translateY(0); }
+
+    /* ======= Sections ======= */
+    .section{
+      padding: 28px;
+    }
+    .loading-screen{
+      text-align:center; padding: 48px 28px;
+      display:flex; flex-direction:column; align-items:center; gap:16px;
+    }
+    .spinner{
+      width:48px; height:48px; border-radius:50%;
+      border: 3px solid rgba(255,255,255,.08);
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    .attendance-closed{
+      background: linear-gradient(180deg, rgba(239,68,68,.12), rgba(239,68,68,.06));
+      border: 1px solid rgba(239,68,68,.35);
+      color: #ffe8e8;
+      padding: 18px;
+      border-radius: var(--radius-lg);
+    }
+
+    /* ======= Forms ======= */
+    .form-grid{ display:grid; gap: 22px; }
+    .form-group{ display:flex; flex-direction:column; gap:10px; }
+    .form-group label{ font-weight: 600; color: var(--text); }
+    .hint{ color: var(--muted); font-size: 12px; }
+
+    .input-wrap{ position:relative; }
+    .input, select{
+      width:100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      transition: box-shadow .15s ease, border-color .2s ease, background .2s ease;
+      outline: none;
+    }
+    .input:focus, select:focus{ box-shadow: var(--focus); border-color: var(--accent); background: rgba(255,255,255,.06); }
+    .input::placeholder{ color: #8b93a7; }
+
+    .radio-row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .choice{
+      display:flex; align-items:center; gap:10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 10px 12px; border-radius: 12px;
+    }
+    .choice input{ width:18px; height:18px; accent-color: var(--accent); }
+
+    .checkbox{ display:flex; align-items:center; gap:10px; }
+    .checkbox input{ width:18px; height:18px; accent-color: var(--accent); }
+    .soft{
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 14px; border-radius: 12px;
+    }
+
+    /* Suggestions dropdown */
+    .suggestions{
+      position:absolute; inset-inline:0; top: calc(100% + 6px);
+      background: #0c1326; border:1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow); overflow:hidden; display:none; z-index: 40;
+      max-height: 240px; overflow-y:auto;
+    }
+    .suggestion-item{
+      padding: 12px 14px; cursor:pointer; border-bottom: 1px solid var(--border);
+    }
+    .suggestion-item:last-child{ border-bottom:none; }
+    .suggestion-item:hover{ background: rgba(255,255,255,.04); }
+
+    /* Family block */
+    .family-section, .visitor-section{ display:none; }
+    .family-media{ display:flex; align-items:center; gap:12px; }
+    .family-member{
+      display:flex; align-items:center; gap:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      padding: 12px; border-radius: 12px;
+    }
+    .remove-btn{
+      background: rgba(239,68,68,.9); color:white; border:0;
+      width:28px; height:28px; border-radius: 8px; cursor:pointer;
+    }
+
+    /* Buttons */
+    .btn{
+      appearance:none; border:1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 700; letter-spacing:.25px;
+      cursor:pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.25); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(0); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; transform: none; }
+    .btn-primary{ background: linear-gradient(180deg, rgba(79,140,255,.18), rgba(79,140,255,.12)); border-color: rgba(79,140,255,.45); }
+    .btn-success{ background: linear-gradient(180deg, rgba(34,197,94,.2), rgba(34,197,94,.1)); border-color: rgba(34,197,94,.5); width:100%; padding: 16px 22px; font-size: 18px; }
+    .btn-danger{ background: linear-gradient(180deg, rgba(239,68,68,.18), rgba(239,68,68,.12)); border-color: rgba(239,68,68,.45); }
+
+    /* Status / toast */
+    #statusMessage{ position: sticky; top: 0; z-index: 3; }
+    .status-message{
+      margin-bottom:14px; border-radius:12px; padding: 12px 14px; font-weight:700; letter-spacing:.2px; text-align:center;
+      border:1px solid var(--border);
+    }
+    .status-success{ background: rgba(34,197,94,.12); color: #cff6db; border-color: rgba(34,197,94,.35); }
+    .status-error{ background: rgba(239,68,68,.12); color: #ffd7d7; border-color: rgba(239,68,68,.35); }
+    .status-info{ background: rgba(79,140,255,.12); color: #dbe7ff; border-color: rgba(79,140,255,.35); }
+    .status-warning{ background: rgba(245,158,11,.12); color: #ffe6c2; border-color: rgba(245,158,11,.40); }
+
+    /* Modal */
+    .modal{ position: fixed; inset:0; display:none; align-items:center; justify-content:center; backdrop-filter: blur(6px); background: rgba(3,6,12,.55); z-index:50; }
+    .modal-content{
+      background: #0c1326; border:1px solid var(--border); border-radius: 16px; width:min(560px, 92vw);
+      box-shadow: var(--shadow); max-height: 85vh; overflow:auto;
+      padding: 22px 22px;
+      animation: pop .16s ease;
+    }
+    @keyframes pop{ from{ transform: translateY(6px); opacity:.7 } }
+    .modal-header{ display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom: 1px solid var(--border); margin-bottom:16px; }
+    .close{ border: 1px solid var(--border); border-radius: 10px; padding:6px 10px; cursor:pointer; color: var(--muted); background: transparent; }
+    .admin-section{ border: 1px solid var(--border); border-radius: 14px; padding:16px; background: rgba(255,255,255,.02); }
+    .admin-status{ border-left: 4px solid var(--accent); padding:12px 12px; border-radius: 10px; background: rgba(79,140,255,.08); margin-bottom: 16px; }
+    .admin-status.open{ border-left-color: var(--success); background: rgba(34,197,94,.10); }
+    .admin-status.closed{ border-left-color: var(--danger); background: rgba(239,68,68,.10); }
+
+    /* Utilities */
+    .row{ display:flex; gap:12px; flex-wrap: wrap; }
+    .hidden{ display:none !important; }
+    [aria-busy="true"]{ pointer-events:none; opacity:.75; }
+
+    /* Mobile tweaks */
+    @media (max-width: 720px){
+      body{ padding: 14px; }
+      .section,.header{ padding: 22px; }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ transition: none !important; animation: none !important; }
+    }
+  </style>
 </head>
+
 <body>
-    <div class="container">
-        <button class="admin-btn" onclick="openAdminModal()">Admin</button>
-        
-        <div class="header">
-            <h1>🏛️ Glasgow SDA Church</h1>
-            <p>Welcome! Please check in below</p>
-            <div id="eventTypeDisplay" class="event-type" style="display: none;">
-                📅 <span id="currentEventType"></span>
-            </div>
-            <div id="attendanceStatusDisplay" class="attendance-status" style="display: none;">
-                <span id="attendanceStatusText"></span>
-            </div>
-        </div>
+  <div class="container" id="app">
+    <button class="admin-btn" onclick="openAdminModal()" aria-label="Open Admin">Admin</button>
 
-        <!-- Loading Screen -->
-        <div id="loadingScreen" class="loading-screen">
-            <div class="spinner"></div>
-            <h2>Loading Church Attendance System...</h2>
-            <p>Checking attendance session status...</p>
-        </div>
-
-        <!-- Attendance Closed Message -->
-        <div id="attendanceClosedMessage" class="attendance-closed hidden">
-            <h2>🔒 Attendance Not Available</h2>
-            <p>Attendance has not been opened for today yet. Please contact an administrator to begin today's attendance session.</p>
-            <button class="btn btn-primary" onclick="checkSessionStatus()" style="margin-top: 15px;">
-                🔄 Check Again
-            </button>
-        </div>
-
-        <!-- Main Form -->
-        <div class="form-container hidden" id="formContainer">
-            <div id="statusMessage"></div>
-
-            <form id="checkinForm">
-                <div class="form-group">
-                    <label for="name">Your Name:</label>
-                    <div class="input-container">
-                        <input type="text" id="name" name="name" placeholder="Start typing your name..." autocomplete="off" required>
-                        <div id="suggestions" class="suggestions"></div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Age Category:</label>
-                    <div class="radio-group">
-                        <div class="checkbox-group">
-                            <input type="radio" id="ageAdult" name="ageCategory" value="adult" checked>
-                            <label for="ageAdult">Adult (18+)</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="radio" id="ageYouth" name="ageCategory" value="youth">
-                            <label for="ageYouth">Youth (13-17)</label>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="contactSection" class="form-group">
-                    <label for="contact">Contact Information:</label>
-                    <input type="text" id="contact" name="contact" placeholder="Phone number or email address">
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="withFamily">
-                    <label for="withFamily">I'm here with family members</label>
-                </div>
-
-                <div id="familySection" class="family-section">
-                    <h3>👨‍👩‍👧‍👦 Family Members Attending</h3>
-                    <div id="familyMembers"></div>
-                    
-                    <div class="add-family-section">
-                        <h4>Add Family Member</h4>
-                        <div class="add-family-form">
-                            <div class="family-name-container">
-                                <input type="text" id="newFamilyMember" placeholder="Family member name" autocomplete="off">
-                                <div id="familySuggestions" class="suggestions"></div>
-                            </div>
-                            <div>
-                                <select id="newFamilyAge">
-                                    <option value="adult">Adult</option>
-                                    <option value="youth">Youth</option>
-                                    <option value="child">Child</option>
-                                    <option value="infant">Infant</option>
-                                </select>
-                            </div>
-                            <div class="family-contact-field" id="familyContactField">
-                                <input type="text" id="newFamilyContact" placeholder="Contact info">
-                                <div class="same-contact-option">
-                                    <input type="checkbox" id="sameContactCheckbox">
-                                    <label for="sameContactCheckbox">Same as above</label>
-                                </div>
-                            </div>
-                            <div style="grid-column: 1 / -1; margin-top: 10px;">
-                                <button type="button" class="btn btn-secondary" onclick="addFamilyMember()">Add Family Member</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="isVisitor">
-                    <label for="isVisitor">I'm visiting today</label>
-                </div>
-
-                <div id="visitorSection" class="visitor-section">
-                    <h3>👋 Welcome Visitor!</h3>
-                    <p>We're so glad you're here with us today! 🙏</p>
-                    <div class="form-group" style="margin-top: 15px;">
-                        <label for="visitorStatus">This is my:</label>
-                        <select id="visitorStatus" name="visitorStatus">
-                            <option value="first_time">First time visiting</option>
-                            <option value="returning_visitor">Second or third visit</option>
-                            <option value="been_a_while">Been a while since I visited</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit" id="submitBtn" class="btn btn-success">
-                    <span id="submitText">Check In ✅</span>
-                    <span id="submitLoader" class="loading" style="display: none;"></span>
-                </button>
-            </form>
-        </div>
+    <div class="header">
+      <img src="8ecf755edc7133f5667b041c28797e5b.png" alt="Glasgow SDA Church Logo" 
+       style="height: 34px; vertical-align: middle; margin-right: 10px; border-radius: 6px;">
+      Glasgow SDA Church      
+      <p>Welcome! Please check in below.</p>
+      <div class="badges">
+        <div id="eventTypeDisplay" class="chip hidden">📅 <span id="currentEventType"></span></div>
+        <div id="attendanceStatusDisplay" class="chip"><span class="dot"></span><span id="attendanceStatusText">Status</span></div>
+      </div>
     </div>
 
-    <!-- Admin Modal -->
-    <div id="adminModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🔧 Admin Panel</h2>
-                <span class="close" onclick="closeAdminModal()">&times;</span>
-            </div>
-
-            <!-- Password Section -->
-            <div id="passwordSection" class="admin-section">
-                <h3>Enter Admin Password</h3>
-                <div class="admin-form">
-                    <input type="password" id="adminPassword" placeholder="Enter password">
-                    <button type="button" class="btn btn-primary" onclick="verifyPassword()">Login</button>
-                </div>
-            </div>
-
-            <!-- Admin Functions -->
-            <div id="adminFunctions" class="hidden">
-                <!-- Attendance Status -->
-                <div id="attendanceStatusSection" class="admin-status">
-                    <h4>📊 Today's Attendance Status</h4>
-                    <div id="adminAttendanceStatus">Checking status...</div>
-                </div>
-
-                <!-- Event & Attendance Management -->
-                <div class="admin-section">
-                    <h3>📅 Event & Attendance Management</h3>
-                    <div class="admin-form">
-                        <label for="eventTypeSelect">Today's Event Type:</label>
-                        <select id="eventTypeSelect" onchange="toggleCustomEvent()">
-                            <option value="Sabbath Worship">Sabbath Worship</option>
-                            <option value="Prayer Meeting">Prayer Meeting</option>
-                            <option value="Youth Program">Youth Program</option>
-                            <option value="Concert">Concert</option>
-                            <option value="Evangelistic Meeting">Evangelistic Meeting</option>
-                            <option value="Communion Service">Communion Service</option>
-                            <option value="Other">Other</option>
-                        </select>
-                        <input type="text" id="customEventType" placeholder="Enter custom event type" class="custom-event-input">
-                        
-                        <div id="attendanceControls">
-                            <button type="button" id="openAttendanceBtn" class="btn btn-success" onclick="openAttendance()">
-                                🔓 Open Today's Attendance
-                            </button>
-                            <button type="button" id="closeAttendanceBtn" class="btn btn-danger hidden" onclick="closeAttendance()">
-                                🔒 Close & Send Report
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Manual Export -->
-                <div class="admin-section" id="manualExportSection">
-                    <h3>📧 Manual Export</h3>
-                    <div class="admin-form">
-                        <button type="button" class="btn btn-primary" onclick="exportTodayAttendance()" id="manualExportBtn">
-                            <span>Email Today's Report</span>
-                        </button>
-                        <small style="color: #666; margin-top: 5px;">
-                            Sends CSV file to ct.glasgow.church@gmail.com
-                        </small>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Loading -->
+    <div id="loadingScreen" class="section loading-screen">
+      <div class="spinner" role="status" aria-label="Loading"></div>
+      <div>
+        <h3 style="margin:.5rem 0 0">Loading Church Attendance System…</h3>
+        <p class="hint" style="margin:.35rem 0 0">Checking attendance session status.</p>
+      </div>
     </div>
 
-    <script>
-        // === CONFIGURATION ===
-        const CONFIG = {
-            SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxzsPerH8g7Nvliy8ukpLfR3RmWF_hVQIZ7keUtvV1TtS1T-Wm2Qxmochrf74SYMmHn_A/exec',
-            ADMIN_PASSWORD: 'glasgow2025',
-            MAX_RETRIES: 3,
-            RETRY_DELAY: 2000,
-            REQUEST_TIMEOUT: 30000
-        };
+    <!-- Closed -->
+    <div id="attendanceClosedMessage" class="section hidden" role="status">
+      <div class="attendance-closed">
+        <h3 style="margin:0 0 8px">🔒 Attendance Not Available</h3>
+        <p class="hint">Attendance has not been opened for today yet. Please contact an administrator to begin today's attendance session.</p>
+        <div style="margin-top:12px">
+          <button class="btn btn-primary" onclick="checkSessionStatus()">🔄 Check Again</button>
+        </div>
+      </div>
+    </div>
 
-        // === STATE MANAGEMENT ===
-        let state = {
-            memberDatabase: [],
-            allIndividuals: [],
-            attendanceSession: null,
-            isAdminAuthenticated: false,
-            isLoading: false,
-            pendingCallbacks: new Map()
-        };
+    <!-- Main form -->
+    <div id="formContainer" class="section hidden">
+      <div id="statusMessage" aria-live="polite"></div>
 
-        // === PURE JSONP API (ZERO CORS DEPENDENCY) ===
-        const api = {
-            // Generate unique callback names
-            generateCallbackName() {
-                return 'jsonp_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            },
+      <form id="checkinForm" class="form-grid">
+        <!-- Name -->
+        <div class="form-group">
+          <label for="name">Your Name</label>
+          <div class="input-wrap">
+            <input class="input" id="name" name="name" type="text" placeholder="Start typing your name…" autocomplete="off" required />
+            <div id="suggestions" class="suggestions"></div>
+          </div>
+        </div>
 
-            // Pure JSONP request - completely bypasses CORS
-            jsonpRequest(payload, timeout = CONFIG.REQUEST_TIMEOUT) {
-                return new Promise((resolve, reject) => {
-                    const callbackName = this.generateCallbackName();
-                    let script = null;
-                    let timeoutId = null;
-                    
-                    // Cleanup function
-                    const cleanup = () => {
-                        if (script && script.parentNode) {
-                            script.parentNode.removeChild(script);
-                        }
-                        if (window[callbackName]) {
-                            delete window[callbackName];
-                        }
-                        if (timeoutId) {
-                            clearTimeout(timeoutId);
-                        }
-                        state.pendingCallbacks.delete(callbackName);
-                    };
-                    
-                    // Store callback for potential cleanup
-                    state.pendingCallbacks.set(callbackName, cleanup);
-                    
-                    // Set up global callback function
-                    window[callbackName] = (data) => {
-                        cleanup();
-                        resolve(data);
-                    };
-                    
-                    // Create and configure script element
-                    script = document.createElement('script');
-                    
-                    // Handle script errors
-                    script.onerror = () => {
-                        cleanup();
-                        reject(new Error('JSONP script failed to load'));
-                    };
-                    
-                    // Build URL with parameters
-                    const params = new URLSearchParams();
-                    params.append('payload', JSON.stringify(payload));
-                    params.append('callback', callbackName);
-                    
-                    // Set script source and append to head
-                    script.src = `${CONFIG.SCRIPT_URL}?${params}`;
-                    script.async = true;
-                    script.defer = true;
-                    
-                    // Set timeout
-                    timeoutId = setTimeout(() => {
-                        cleanup();
-                        reject(new Error(`Request timeout after ${timeout}ms`));
-                    }, timeout);
-                    
-                    // Add script to document
-                    document.head.appendChild(script);
-                });
-            },
+        <!-- Age + Contact -->
+        <div class="form-group">
+          <label>Age Category</label>
+          <div class="radio-row">
+            <label class="choice"><input type="radio" id="ageAdult" name="ageCategory" value="adult" checked /> Adult (18+)</label>
+            <label class="choice"><input type="radio" id="ageYouth" name="ageCategory" value="youth" /> Youth (13–17)</label>
+          </div>
+        </div>
 
-            // Main API call method with enhanced retry logic
-            async call(payload, retries = CONFIG.MAX_RETRIES) {
-                const startTime = Date.now();
-                
-                for (let attempt = 0; attempt <= retries; attempt++) {
-                    try {
-                        console.log(`API Call (attempt ${attempt + 1}/${retries + 1}):`, payload.action);
-                        
-                        const result = await this.jsonpRequest(payload);
-                        
-                        console.log(`API Response (${Date.now() - startTime}ms):`, result);
-                        
-                        // Validate response structure
-                        if (typeof result !== 'object' || result === null) {
-                            throw new Error('Invalid response format');
-                        }
-                        
-                        return result;
-                        
-                    } catch (error) {
-                        console.error(`API Error (attempt ${attempt + 1}):`, error);
-                        
-                        // Don't retry on last attempt
-                        if (attempt === retries) {
-                            throw new Error(`API call failed after ${retries + 1} attempts: ${error.message}`);
-                        }
-                        
-                        // Progressive backoff delay
-                        const delay = CONFIG.RETRY_DELAY * Math.pow(2, attempt);
-                        console.log(`Retrying in ${delay}ms...`);
-                        await this.delay(delay);
-                    }
-                }
-            },
+        <div class="form-group" id="contactSection">
+          <label for="contact">Contact Information</label>
+          <input class="input" id="contact" name="contact" type="text" placeholder="Phone number or email address" />
+        </div>
 
-            // Delay utility
-            delay(ms) {
-                return new Promise(resolve => setTimeout(resolve, ms));
-            },
+        <!-- Family -->
+        <div class="form-group soft checkbox">
+          <input type="checkbox" id="withFamily" />
+          <label for="withFamily">I'm here with family members</label>
+        </div>
 
-            // Cleanup any pending requests
-            cleanup() {
-                state.pendingCallbacks.forEach(cleanup => cleanup());
-                state.pendingCallbacks.clear();
-            }
-        };
+        <div id="familySection" class="family-section soft">
+          <h3 style="margin:0 0 10px">👨‍👩‍👧‍👦 Family Members Attending</h3>
+          <div id="familyMembers" class="form-grid"></div>
 
-        // === UI STATE MANAGEMENT ===
-        const ui = {
-            showLoading() {
-                document.getElementById('loadingScreen').classList.remove('hidden');
-                document.getElementById('formContainer').classList.add('hidden');
-                document.getElementById('attendanceClosedMessage').classList.add('hidden');
-                state.isLoading = true;
-            },
-
-            showForm() {
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('formContainer').classList.remove('hidden');
-                document.getElementById('attendanceClosedMessage').classList.add('hidden');
-                this.updateEventTypeDisplay();
-                this.updateAttendanceStatusDisplay(true);
-                state.isLoading = false;
-            },
-
-            showClosed() {
-                document.getElementById('loadingScreen').classList.add('hidden');
-                document.getElementById('formContainer').classList.add('hidden');
-                document.getElementById('attendanceClosedMessage').classList.remove('hidden');
-                this.updateAttendanceStatusDisplay(false);
-                state.isLoading = false;
-            },
-
-            updateEventTypeDisplay() {
-                const eventTypeDisplay = document.getElementById('eventTypeDisplay');
-                const currentEventType = document.getElementById('currentEventType');
-                
-                if (state.attendanceSession?.eventType) {
-                    currentEventType.textContent = state.attendanceSession.eventType;
-                    eventTypeDisplay.style.display = 'inline-block';
-                } else {
-                    eventTypeDisplay.style.display = 'none';
-                }
-            },
-
-            updateAttendanceStatusDisplay(isOpen) {
-                const statusDisplay = document.getElementById('attendanceStatusDisplay');
-                const statusText = document.getElementById('attendanceStatusText');
-                
-                statusDisplay.style.display = 'inline-block';
-                if (isOpen) {
-                    statusText.textContent = '🟢 Attendance Open';
-                    statusText.style.color = '#28a745';
-                } else {
-                    statusText.textContent = '🔴 Attendance Closed';
-                    statusText.style.color = '#dc3545';
-                }
-            },
-
-            updateAdminStatus() {
-                if (!state.isAdminAuthenticated) return;
-
-                const statusSection = document.getElementById('attendanceStatusSection');
-                const statusDiv = document.getElementById('adminAttendanceStatus');
-                const openBtn = document.getElementById('openAttendanceBtn');
-                const closeBtn = document.getElementById('closeAttendanceBtn');
-                const manualExportSection = document.getElementById('manualExportSection');
-                
-                const isOpen = state.attendanceSession?.isOpen;
-
-                if (isOpen) {
-                    statusSection.className = 'admin-status open';
-                    statusDiv.innerHTML = `
-                        <strong>Status:</strong> OPEN 🟢<br>
-                        <strong>Event:</strong> ${state.attendanceSession.eventType || 'Not set'}<br>
-                        <strong>Opened:</strong> ${new Date(state.attendanceSession.openedAt).toLocaleTimeString()}<br>
-                        <strong>Total Check-ins:</strong> <span id="checkinCount">${state.attendanceSession.totalCheckins || 0}</span>
-                    `;
-                    openBtn.classList.add('hidden');
-                    closeBtn.classList.remove('hidden');
-                    manualExportSection.style.display = 'block';
-                } else {
-                    statusSection.className = 'admin-status closed';
-                    statusDiv.innerHTML = `
-                        <strong>Status:</strong> CLOSED 🔴<br>
-                        <strong>Message:</strong> Attendance has not been opened for today.<br>
-                        <small>Open attendance to allow check-ins for today's event.</small>
-                    `;
-                    openBtn.classList.remove('hidden');
-                    closeBtn.classList.add('hidden');
-                    manualExportSection.style.display = 'none';
-                }
-            }
-        };
-
-        // === INITIALIZATION ===
-        async function initializeApp() {
-            ui.showLoading();
-            
-            try {
-                // Load members and check session status in parallel
-                const [membersResult, sessionResult] = await Promise.allSettled([
-                    loadMembers(),
-                    checkSessionStatus()
-                ]);
-
-                // Handle results
-                const membersLoaded = membersResult.status === 'fulfilled' && membersResult.value;
-                const sessionOpen = sessionResult.status === 'fulfilled' && sessionResult.value;
-
-                if (!membersLoaded) {
-                    console.warn('Failed to load members:', membersResult.reason);
-                }
-
-                if (sessionOpen) {
-                    ui.showForm();
-                } else {
-                    ui.showClosed();
-                }
-
-            } catch (error) {
-                console.error('Initialization failed:', error);
-                ui.showClosed();
-                showMessage('⚠️ Unable to connect to server. Please try again later.', 'error');
-            }
-        }
-
-        // === SESSION MANAGEMENT ===
-        async function checkSessionStatus() {
-            try {
-                const today = new Date().toISOString().split('T')[0];
-                const result = await api.call({
-                    action: 'getAttendanceSession',
-                    date: today
-                });
-
-                if (result.success) {
-                    state.attendanceSession = result.session;
-                    return state.attendanceSession?.isOpen || false;
-                }
-                return false;
-            } catch (error) {
-                console.error('Session check failed:', error);
-                return false;
-            }
-        }
-
-        // === MEMBER MANAGEMENT ===
-        async function loadMembers() {
-            try {
-                const result = await api.call({ action: 'getMembers' });
-                
-                if (result.success) {
-                    state.memberDatabase = result.members || [];
-                    buildIndividualsList();
-                    console.log(`Loaded ${state.memberDatabase.length} members, ${state.allIndividuals.length} total individuals`);
-                    return true;
-                }
-                return false;
-            } catch (error) {
-                console.error('Failed to load members:', error);
-                return false;
-            }
-        }
-
-        function buildIndividualsList() {
-            state.allIndividuals = [];
-            
-            state.memberDatabase.forEach(member => {
-                state.allIndividuals.push({
-                    name: member.name,
-                    ageCategory: member.ageCategory,
-                    contactInfo: member.contactInfo,
-                    isPrimary: true,
-                    family: member.family || [],
-                    firstVisit: member.firstVisit,
-                    totalVisits: member.totalVisits
-                });
-                
-                if (member.family && member.family.length > 0) {
-                    member.family.forEach(familyMember => {
-                        const existingPrimary = state.allIndividuals.find(ind => 
-                            ind.isPrimary && ind.name.toLowerCase() === familyMember.name.toLowerCase()
-                        );
-                        
-                        if (!existingPrimary) {
-                            state.allIndividuals.push({
-                                name: familyMember.name,
-                                ageCategory: familyMember.ageCategory || 'adult',
-                                contactInfo: familyMember.contactInfo || '',
-                                isPrimary: false,
-                                family: [],
-                                firstVisit: '',
-                                totalVisits: 0
-                            });
-                        }
-                    });
-                }
-            });
-            
-            // Remove duplicates
-            const uniqueIndividuals = [];
-            const seen = new Set();
-            state.allIndividuals.forEach(individual => {
-                const lowerName = individual.name.toLowerCase();
-                if (!seen.has(lowerName)) {
-                    seen.add(lowerName);
-                    uniqueIndividuals.push(individual);
-                }
-            });
-            
-            state.allIndividuals = uniqueIndividuals;
-        }
-
-        // === FORM SUBMISSION ===
-        async function submitAttendance(e) {
-            e.preventDefault();
-            
-            // Check if attendance session is open
-            if (!state.attendanceSession || !state.attendanceSession.isOpen) {
-                showMessage('Attendance is not open. Please contact an administrator.', 'error');
-                return;
-            }
-            
-            const name = document.getElementById('name').value.trim();
-            if (!name) {
-                showMessage('Please enter your name', 'error');
-                return;
-            }
-
-            const ageCategory = document.querySelector('input[name="ageCategory"]:checked').value;
-            const contactInfo = document.getElementById('contact').value.trim();
-            
-            if (!contactInfo) {
-                showMessage('Please provide contact information', 'error');
-                return;
-            }
-
-            const isVisitor = document.getElementById('isVisitor').checked;
-            const withFamily = document.getElementById('withFamily').checked;
-            const visitorStatus = isVisitor ? document.getElementById('visitorStatus').value : '';
-            
-            const now = new Date();
-            const date = now.toISOString().split('T')[0];
-            const time = now.toTimeString().split(' ')[0].substring(0, 5);
-
-            // Collect family members
-            const familyMembers = [];
-            const familyMemberData = [];
-            
-            if (withFamily) {
-                const checkedFamily = document.querySelectorAll('input[name="familyMember"]:checked');
-                checkedFamily.forEach(checkbox => {
-                    const memberName = checkbox.value;
-                    const memberAge = checkbox.dataset.age;
-                    const memberContact = checkbox.dataset.contact;
-                    
-                    familyMembers.push(memberName);
-                    
-                    familyMemberData.push({
-                        name: memberName,
-                        ageCategory: memberAge,
-                        contactInfo: memberContact,
-                        isVisitor: isVisitor,
-                        visitorStatus: visitorStatus
-                    });
-                });
-            }
-
-            // Primary person's data
-            const primaryAttendanceData = {
-                timestamp: now.toISOString(),
-                id: 'web_' + Date.now(),
-                name,
-                ageCategory,
-                contactInfo,
-                date,
-                time,
-                isVisitor,
-                visitorStatus,
-                withFamily,
-                familyMembers,
-                sessionId: state.attendanceSession.sessionId
-            };
-
-            const primaryMemberData = {
-                name,
-                ageCategory,
-                contactInfo,
-                family: familyMembers.map(fname => {
-                    const checkbox = [...document.querySelectorAll('input[name="familyMember"]')].find(cb => cb.value === fname);
-                    return {
-                        name: fname,
-                        ageCategory: checkbox ? checkbox.dataset.age : 'adult',
-                        contactInfo: checkbox ? checkbox.dataset.contact : ''
-                    };
-                }),
-                firstVisit: isVisitor && visitorStatus === 'first_time' ? date : '',
-                totalVisits: 1
-            };
-
-            try {
-                setButtonLoading(true);
-                showMessage('Submitting attendance...', 'info');
-                
-                // Submit primary person
-                const primaryResult = await api.call({
-                    action: 'addAttendance',
-                    attendanceData: primaryAttendanceData,
-                    memberData: primaryMemberData
-                });
-                
-                if (!primaryResult.success) {
-                    throw new Error(primaryResult.error || 'Failed to submit attendance');
-                }
-                
-                // Submit family members
-                for (const familyMember of familyMemberData) {
-                    const familyAttendanceData = {
-                        timestamp: now.toISOString(),
-                        id: 'web_family_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-                        name: familyMember.name,
-                        ageCategory: familyMember.ageCategory,
-                        contactInfo: familyMember.contactInfo,
-                        date,
-                        time,
-                        isVisitor: familyMember.isVisitor,
-                        visitorStatus: familyMember.visitorStatus,
-                        withFamily: false,
-                        familyMembers: [],
-                        sessionId: state.attendanceSession.sessionId
-                    };
-                    
-                    const familyMemberMemberData = {
-                        name: familyMember.name,
-                        ageCategory: familyMember.ageCategory,
-                        contactInfo: familyMember.contactInfo,
-                        family: [],
-                        firstVisit: familyMember.isVisitor && familyMember.visitorStatus === 'first_time' ? date : '',
-                        totalVisits: 1
-                    };
-                    
-                    try {
-                        await api.call({
-                            action: 'addAttendance',
-                            attendanceData: familyAttendanceData,
-                            memberData: familyMemberMemberData
-                        });
-                    } catch (err) {
-                        console.warn(`Failed to submit family member ${familyMember.name}:`, err);
-                    }
-                }
-                
-                // Update session count
-                if (state.attendanceSession) {
-                    state.attendanceSession.totalCheckins = (state.attendanceSession.totalCheckins || 0) + 1 + familyMemberData.length;
-                    const countElement = document.getElementById('checkinCount');
-                    if (countElement) {
-                        countElement.textContent = state.attendanceSession.totalCheckins;
-                    }
-                }
-                
-                // Success message
-                let message = `Welcome, ${name}! `;
-                if (isVisitor) {
-                    if (visitorStatus === 'first_time') {
-                        message += "We're so glad you're visiting us for the first time! 🎉";
-                    } else if (visitorStatus === 'been_a_while') {
-                        message += "Great to see you back after a while! 😊";
-                    } else {
-                        message += "Thanks for visiting us again! 🙏";
-                    }
-                } else {
-                    message += "You're checked in! 📋";
-                }
-                
-                if (familyMembers.length > 0) {
-                    message += ` Family: ${familyMembers.join(', ')}`;
-                }
-                
-                showMessage(message, 'success');
-                resetForm();
-                
-                // Refresh member database
-                setTimeout(() => {
-                    loadMembers();
-                }, 1000);
-                
-            } catch (err) {
-                console.error('Submit error:', err);
-                showMessage('Failed to submit: ' + err.message, 'error');
-            } finally {
-                setButtonLoading(false);
-            }
-        }
-
-        // === AUTO-COMPLETE FUNCTIONS ===
-        function handleNameInput(e) {
-            const query = e.target.value.toLowerCase().trim();
-            const suggestions = document.getElementById('suggestions');
-            
-            if (query.length < 2) {
-                suggestions.style.display = 'none';
-                return;
-            }
-
-            const matches = state.allIndividuals.filter(individual => 
-                individual.name.toLowerCase().includes(query)
-            ).slice(0, 8);
-
-            if (matches.length > 0) {
-                suggestions.innerHTML = matches.map(individual => 
-                    `<div class="suggestion-item" onclick="selectMember('${individual.name.replace(/'/g, "\\'")}')">${individual.name}</div>`
-                ).join('');
-                suggestions.style.display = 'block';
-            } else {
-                suggestions.style.display = 'none';
-            }
-        }
-
-        function handleFamilyNameInput(e) {
-            const query = e.target.value.toLowerCase().trim();
-            const suggestions = document.getElementById('familySuggestions');
-            
-            if (query.length < 2) {
-                suggestions.style.display = 'none';
-                return;
-            }
-
-            const matches = state.allIndividuals.filter(individual => 
-                individual.name.toLowerCase().includes(query)
-            ).slice(0, 8);
-
-            if (matches.length > 0) {
-                suggestions.innerHTML = matches.map(individual => 
-                    `<div class="suggestion-item" onclick="selectFamilyMember('${individual.name.replace(/'/g, "\\'")}')">${individual.name}</div>`
-                ).join('');
-                suggestions.style.display = 'block';
-            } else {
-                suggestions.style.display = 'none';
-            }
-        }
-
-        function selectMember(name) {
-            document.getElementById('name').value = name;
-            document.getElementById('suggestions').style.display = 'none';
-            
-            const individual = state.allIndividuals.find(ind => ind.name === name);
-            if (!individual) return;
-            
-            if (individual.ageCategory) {
-                const ageRadio = document.querySelector(`input[name="ageCategory"][value="${individual.ageCategory}"]`);
-                if (ageRadio) {
-                    ageRadio.checked = true;
-                    toggleContactSection();
-                }
-            }
-            
-            if (individual.contactInfo) {
-                document.getElementById('contact').value = individual.contactInfo;
-            }
-            
-            const primaryMember = state.memberDatabase.find(m => m.name.toLowerCase() === name.toLowerCase());
-            if (primaryMember && primaryMember.family && primaryMember.family.length > 0) {
-                document.getElementById('withFamily').checked = true;
-                toggleFamilySection();
-                loadExistingFamily(primaryMember.family);
-            }
-        }
-
-        function selectFamilyMember(name) {
-            document.getElementById('newFamilyMember').value = name;
-            document.getElementById('familySuggestions').style.display = 'none';
-            
-            const individual = state.allIndividuals.find(ind => ind.name === name);
-            if (individual) {
-                document.getElementById('newFamilyAge').value = individual.ageCategory || 'adult';
-                toggleFamilyContactField();
-                
-                if (individual.contactInfo) {
-                    document.getElementById('newFamilyContact').value = individual.contactInfo;
-                    document.getElementById('sameContactCheckbox').checked = false;
-                }
-            }
-        }
-
-        // === FAMILY MANAGEMENT ===
-        function loadExistingFamily(family) {
-            const familyContainer = document.getElementById('familyMembers');
-            familyContainer.innerHTML = '';
-            
-            family.forEach((familyMember) => {
-                addFamilyMemberToUI(
-                    familyMember.name, 
-                    familyMember.ageCategory || 'adult', 
-                    familyMember.contactInfo || '', 
-                    true
-                );
-            });
-        }
-
-        function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked = true) {
-            const familyContainer = document.getElementById('familyMembers');
-            const memberDiv = document.createElement('div');
-            memberDiv.className = 'family-member';
-            
-            const ageEmoji = {
-                'adult': '👤',
-                'youth': '🧑',
-                'child': '👶',
-                'infant': '🍼'
-            }[ageCategory] || '👤';
-            
-            const contactDisplay = contactInfo ? ` • ${contactInfo}` : '';
-            
-            memberDiv.innerHTML = `
-                <input type="checkbox" name="familyMember" value="${name}" data-age="${ageCategory}" data-contact="${contactInfo}" ${isChecked ? 'checked' : ''}>
-                <div class="family-member-info">
-                    <div class="family-member-name">${ageEmoji} ${name}</div>
-                    <div class="family-member-details">${ageCategory.charAt(0).toUpperCase() + ageCategory.slice(1)}${contactDisplay}</div>
+          <div class="admin-section" style="margin-top:12px">
+            <h4 style="margin:0 0 10px">Add Family Member</h4>
+            <div class="form-grid">
+              <div class="input-wrap">
+                <input class="input" id="newFamilyMember" type="text" placeholder="Family member name" autocomplete="off" />
+                <div id="familySuggestions" class="suggestions"></div>
+              </div>
+              <select id="newFamilyAge" class="input">
+                <option value="adult">Adult</option>
+                <option value="youth">Youth</option>
+                <option value="child">Child</option>
+                <option value="infant">Infant</option>
+              </select>
+              <div id="familyContactField" class="input-wrap" style="grid-column: 1 / -1">
+                <input class="input" id="newFamilyContact" type="text" placeholder="Contact info" />
+                <div class="checkbox" style="margin-top:8px">
+                  <input type="checkbox" id="sameContactCheckbox" />
+                  <label for="sameContactCheckbox" class="hint">Same as above</label>
                 </div>
-                <button type="button" class="remove-btn" onclick="removeFamilyMember(this)">×</button>
-            `;
-            
-            familyContainer.appendChild(memberDiv);
-        }
+              </div>
+              <div style="grid-column: 1 / -1">
+                <button type="button" class="btn" onclick="addFamilyMember()">Add Family Member</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        function addFamilyMember() {
-            const nameInput = document.getElementById('newFamilyMember');
-            const ageSelect = document.getElementById('newFamilyAge');
-            const contactInput = document.getElementById('newFamilyContact');
-            const sameContactCheckbox = document.getElementById('sameContactCheckbox');
-            
-            const name = nameInput.value.trim();
-            const ageCategory = ageSelect.value;
-            let contactInfo = contactInput.value.trim();
-            
-            if (sameContactCheckbox.checked) {
-                contactInfo = document.getElementById('contact').value.trim();
-            }
-            
-            if (name) {
-                addFamilyMemberToUI(name, ageCategory, contactInfo, true);
-                
-                nameInput.value = '';
-                contactInput.value = '';
-                sameContactCheckbox.checked = false;
-                ageSelect.value = 'adult';
-                toggleFamilyContactField();
-                document.getElementById('familySuggestions').style.display = 'none';
-            }
-        }
+        <!-- Visitor -->
+        <div class="form-group soft checkbox">
+          <input type="checkbox" id="isVisitor" />
+          <label for="isVisitor">I'm visiting today</label>
+        </div>
 
-        function removeFamilyMember(button) {
-            button.parentElement.remove();
-        }
+        <div id="visitorSection" class="visitor-section soft">
+          <h3 style="margin:0 0 8px">👋 Welcome Visitor!</h3>
+          <p class="hint">We're so glad you're here with us today!</p>
+          <div class="form-group" style="margin-top:10px">
+            <label for="visitorStatus">This is my:</label>
+            <select id="visitorStatus" class="input" name="visitorStatus">
+              <option value="first_time">First time visiting</option>
+              <option value="returning_visitor">Second or third visit</option>
+              <option value="been_a_while">Been a while since I visited</option>
+            </select>
+          </div>
+        </div>
 
-        // === ADMIN FUNCTIONS ===
-        function openAdminModal() {
-            document.getElementById('adminModal').style.display = 'block';
-            if (state.isAdminAuthenticated) {
-                document.getElementById('passwordSection').classList.add('hidden');
-                document.getElementById('adminFunctions').classList.remove('hidden');
-                ui.updateAdminStatus();
-            } else {
-                document.getElementById('passwordSection').classList.remove('hidden');
-                document.getElementById('adminFunctions').classList.add('hidden');
-                document.getElementById('adminPassword').value = '';
-            }
-        }
+        <button id="submitBtn" type="submit" class="btn btn-success">
+          <span id="submitText">Check In ✅</span>
+          <span id="submitLoader" class="spinner" style="width:16px;height:16px;border-width:2px; display:none"></span>
+        </button>
+      </form>
+    </div>
+  </div>
 
-        function closeAdminModal() {
-            document.getElementById('adminModal').style.display = 'none';
-        }
+  <!-- Admin Modal -->
+  <div id="adminModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="adminTitle">🔧 Admin Panel</h2>
+        <button class="close" onclick="closeAdminModal()" aria-label="Close">&times;</button>
+      </div>
 
-        function verifyPassword() {
-            const password = document.getElementById('adminPassword').value;
-            if (password === CONFIG.ADMIN_PASSWORD) {
-                state.isAdminAuthenticated = true;
-                document.getElementById('passwordSection').classList.add('hidden');
-                document.getElementById('adminFunctions').classList.remove('hidden');
-                showMessage('Admin access granted', 'success');
-                ui.updateAdminStatus();
-            } else {
-                showMessage('Incorrect password', 'error');
-                document.getElementById('adminPassword').value = '';
-            }
-        }
+      <div id="passwordSection" class="admin-section">
+        <h3 style="margin:0 0 8px">Enter Admin Password</h3>
+        <div class="row">
+          <input class="input" type="password" id="adminPassword" placeholder="Enter password" />
+          <button type="button" class="btn btn-primary" onclick="verifyPassword()">Login</button>
+        </div>
+      </div>
 
-        async function openAttendance() {
-            const select = document.getElementById('eventTypeSelect');
-            const customInput = document.getElementById('customEventType');
-            let eventType = select.value;
-            
-            if (eventType === 'Other') {
-                eventType = customInput.value.trim();
-                if (!eventType) {
-                    showMessage('Please enter a custom event type', 'error');
-                    return;
-                }
-            }
+      <div id="adminFunctions" class="hidden">
+        <div id="attendanceStatusSection" class="admin-status">
+          <h4 style="margin:0 0 6px">📊 Today's Attendance Status</h4>
+          <div id="adminAttendanceStatus" class="hint">Checking status…</div>
+        </div>
 
-            try {
-                showMessage('Opening attendance session...', 'info');
-                
-                const result = await api.call({
-                    action: 'openAttendanceSession',
-                    eventType: eventType,
-                    date: new Date().toISOString().split('T')[0]
-                });
+        <div class="admin-section">
+          <h3 style="margin:0 0 8px">📅 Event & Attendance Management</h3>
+          <div class="form-grid">
+            <label for="eventTypeSelect">Today's Event Type</label>
+            <select id="eventTypeSelect" class="input" onchange="toggleCustomEvent()">
+              <option value="Sabbath Worship">Sabbath Worship</option>
+              <option value="Prayer Meeting">Prayer Meeting</option>
+              <option value="Youth Program">Youth Program</option>
+              <option value="Concert">Concert</option>
+              <option value="Evangelistic Meeting">Evangelistic Meeting</option>
+              <option value="Communion Service">Communion Service</option>
+              <option value="Other">Other</option>
+            </select>
+            <input class="input hidden" id="customEventType" type="text" placeholder="Enter custom event type" />
 
-                if (result.success) {
-                    state.attendanceSession = result.session;
-                    showMessage(`Attendance opened for: ${eventType}`, 'success');
-                    ui.showForm();
-                    ui.updateAdminStatus();
-                    closeAdminModal();
-                } else {
-                    throw new Error(result.error || 'Failed to open attendance');
-                }
-            } catch (err) {
-                console.error('Open attendance error:', err);
-                showMessage('Failed to open attendance: ' + err.message, 'error');
-            }
-        }
+            <div id="attendanceControls" class="row" style="margin-top:10px">
+              <button id="openAttendanceBtn" type="button" class="btn btn-success" onclick="openAttendance()">🔓 Open Today's Attendance</button>
+              <button id="closeAttendanceBtn" type="button" class="btn btn-danger hidden" onclick="closeAttendance()">🔒 Close & Send Report</button>
+            </div>
+          </div>
+        </div>
 
-        async function closeAttendance() {
-            if (!confirm('Are you sure you want to close today\'s attendance? This will automatically send the attendance report and prevent further check-ins.')) {
-                return;
-            }
+        <div id="manualExportSection" class="admin-section hidden">
+          <h3 style="margin:0 0 8px">📧 Manual Export</h3>
+          <div class="row">
+            <button id="manualExportBtn" type="button" class="btn btn-primary" onclick="exportTodayAttendance()">Email Today's Report</button>
+          </div>
+          <small class="hint">Sends CSV file to ct.glasgow.church@gmail.com</small>
+        </div>
+      </div>
+    </div>
+  </div>
 
-            try {
-                showMessage('Closing attendance and sending report...', 'info');
-                
-                const result = await api.call({
-                    action: 'closeAttendanceSession',
-                    date: new Date().toISOString().split('T')[0]
-                });
+  <script>
+    // ===== CONFIG =====
+    const CONFIG = {
+      SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxzsPerH8g7Nvliy8ukpLfR3RmWF_hVQIZ7keUtvV1TtS1T-Wm2Qxmochrf74SYMmHn_A/exec',
+      ADMIN_PASSWORD: 'glasgow2025', // Consider rotating this regularly.
+      MAX_RETRIES: 3,
+      RETRY_DELAY: 2000,
+      REQUEST_TIMEOUT: 30000
+    };
 
-                if (result.success) {
-                    state.attendanceSession = null;
-                    showMessage(result.message, 'success');
-                    ui.showClosed();
-                    ui.updateAdminStatus();
-                } else {
-                    throw new Error(result.error || 'Failed to close attendance');
-                }
-            } catch (err) {
-                console.error('Close attendance error:', err);
-                showMessage('Failed to close attendance: ' + err.message, 'error');
-            }
-        }
+    // ===== STATE =====
+    let state = {
+      memberDatabase: [],
+      allIndividuals: [],
+      attendanceSession: null,
+      isAdminAuthenticated: false,
+      isLoading: false,
+      pendingCallbacks: new Map()
+    };
 
-        async function exportTodayAttendance() {
-            try {
-                showMessage('Preparing today\'s attendance report...', 'info');
-                
-                const result = await api.call({
-                    action: 'exportTodayAttendance'
-                });
+    // ===== JSONP API (no CORS) =====
+    const api = {
+      generateCallbackName(){ return 'jsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2); },
+      jsonpRequest(payload, timeout = CONFIG.REQUEST_TIMEOUT){
+        return new Promise((resolve, reject) => {
+          const cb = this.generateCallbackName();
+          let script = null; let timeoutId = null;
 
-                if (result.success) {
-                    showMessage(result.message, 'success');
-                } else {
-                    throw new Error(result.error || 'Failed to export attendance');
-                }
-            } catch (err) {
-                console.error('Export attendance error:', err);
-                showMessage('Failed to export attendance: ' + err.message, 'error');
-            }
-        }
+          const cleanup = () => {
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            try { delete window[cb]; } catch(e) {}
+            if (timeoutId) clearTimeout(timeoutId);
+            state.pendingCallbacks.delete(cb);
+          };
+          state.pendingCallbacks.set(cb, cleanup);
 
-        // === HELPER FUNCTIONS ===
-        function showMessage(message, type = 'info') {
-            const statusDiv = document.getElementById('statusMessage');
-            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 5000);
-        }
+          window[cb] = (data) => { cleanup(); resolve(data); };
 
-        function setButtonLoading(isLoading) {
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
-            const submitLoader = document.getElementById('submitLoader');
-            
-            if (isLoading) {
-                submitBtn.disabled = true;
-                submitText.textContent = 'Submitting...';
-                submitLoader.style.display = 'inline-block';
-            } else {
-                submitBtn.disabled = false;
-                submitText.textContent = 'Check In ✅';
-                submitLoader.style.display = 'none';
-            }
-        }
+          script = document.createElement('script');
+          script.onerror = () => { cleanup(); reject(new Error('JSONP script failed to load')); };
 
-        function resetForm() {
-            document.getElementById('checkinForm').reset();
-            document.getElementById('ageAdult').checked = true;
-            document.getElementById('familySection').style.display = 'none';
-            document.getElementById('visitorSection').style.display = 'none';
-            document.getElementById('contactSection').style.display = 'block';
-            document.getElementById('familyMembers').innerHTML = '';
-            document.getElementById('suggestions').style.display = 'none';
-            document.getElementById('familySuggestions').style.display = 'none';
-            document.getElementById('newFamilyAge').value = 'adult';
-            document.getElementById('sameContactCheckbox').checked = false;
-            toggleFamilyContactField();
-        }
+          const params = new URLSearchParams();
+          params.append('payload', JSON.stringify(payload));
+          params.append('callback', cb);
 
-        function toggleContactSection() {
-            document.getElementById('contactSection').style.display = 'block';
-        }
+          script.src = `${CONFIG.SCRIPT_URL}?${params}`;
+          script.async = true; script.defer = true;
 
-        function toggleFamilySection() {
-            const familySection = document.getElementById('familySection');
-            const isChecked = document.getElementById('withFamily').checked;
-            familySection.style.display = isChecked ? 'block' : 'none';
-        }
+          timeoutId = setTimeout(() => { cleanup(); reject(new Error(\`Request timeout after \${timeout}ms\`)); }, timeout);
 
-        function toggleVisitorSection() {
-            const visitorSection = document.getElementById('visitorSection');
-            const isChecked = document.getElementById('isVisitor').checked;
-            visitorSection.style.display = isChecked ? 'block' : 'none';
-        }
-
-        function toggleFamilyContactField() {
-            const selectedAge = document.getElementById('newFamilyAge').value;
-            const contactField = document.getElementById('familyContactField');
-            
-            if (selectedAge === 'adult' || selectedAge === 'youth') {
-                contactField.style.display = 'block';
-            } else {
-                contactField.style.display = 'none';
-                document.getElementById('newFamilyContact').value = '';
-                document.getElementById('sameContactCheckbox').checked = false;
-            }
-        }
-
-        function handleSameContactCheckbox() {
-            const checkbox = document.getElementById('sameContactCheckbox');
-            const contactInput = document.getElementById('newFamilyContact');
-            const primaryContact = document.getElementById('contact').value;
-            
-            if (checkbox.checked) {
-                contactInput.value = primaryContact;
-                contactInput.style.display = 'none';
-            } else {
-                contactInput.style.display = 'block';
-            }
-        }
-
-        function toggleCustomEvent() {
-            const select = document.getElementById('eventTypeSelect');
-            const customInput = document.getElementById('customEventType');
-            if (select.value === 'Other') {
-                customInput.classList.remove('custom-event-input');
-                customInput.style.display = 'block';
-                customInput.required = true;
-            } else {
-                customInput.classList.add('custom-event-input');
-                customInput.style.display = 'none';
-                customInput.required = false;
-                customInput.value = '';
-            }
-        }
-
-        // === EVENT LISTENERS ===
-        document.addEventListener('DOMContentLoaded', () => {
-            // Form submission
-            document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
-            
-            // Name input autocomplete
-            document.getElementById('name').addEventListener('input', handleNameInput);
-            document.getElementById('newFamilyMember').addEventListener('input', handleFamilyNameInput);
-            
-            // Toggle sections
-            document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
-            document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
-            document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
-            document.getElementById('sameContactCheckbox').addEventListener('change', handleSameContactCheckbox);
-            
-            // Age category radio buttons
-            document.querySelectorAll('input[name="ageCategory"]').forEach(radio => {
-                radio.addEventListener('change', toggleContactSection);
-            });
-
-            // Close suggestions when clicking outside
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.input-container') && !e.target.closest('.family-name-container')) {
-                    document.getElementById('suggestions').style.display = 'none';
-                    document.getElementById('familySuggestions').style.display = 'none';
-                }
-            });
-
-            // Close modal when clicking outside
-            window.onclick = function(event) {
-                const modal = document.getElementById('adminModal');
-                if (event.target === modal) {
-                    closeAdminModal();
-                }
-            };
-
-            // Cleanup on page unload
-            window.addEventListener('beforeunload', () => {
-                api.cleanup();
-            });
-
-            // Initialize form states
-            toggleContactSection();
-            toggleFamilyContactField();
-            
-            // Start the app
-            initializeApp();
+          document.head.appendChild(script);
         });
-    </script>
+      },
+      async call(payload, retries = CONFIG.MAX_RETRIES){
+        for (let attempt = 0; attempt <= retries; attempt++){
+          try{
+            const res = await this.jsonpRequest(payload);
+            if (typeof res !== 'object' || res === null) throw new Error('Invalid response format');
+            return res;
+          }catch(err){
+            if (attempt === retries) throw new Error(\`API call failed after \${retries+1} attempts: \${err.message}\`);
+            await this.delay(CONFIG.RETRY_DELAY * Math.pow(2, attempt));
+          }
+        }
+      },
+      delay(ms){ return new Promise(r => setTimeout(r, ms)); },
+      cleanup(){ state.pendingCallbacks.forEach(fn => fn()); state.pendingCallbacks.clear(); }
+    };
+
+    // ===== UI helpers =====
+    const ui = {
+      showLoading(){
+        document.getElementById('loadingScreen').classList.remove('hidden');
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('attendanceClosedMessage').classList.add('hidden');
+        state.isLoading = true;
+      },
+      showForm(){
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('formContainer').classList.remove('hidden');
+        document.getElementById('attendanceClosedMessage').classList.add('hidden');
+        this.updateEventTypeDisplay();
+        this.updateAttendanceStatusDisplay(true);
+        state.isLoading = false;
+      },
+      showClosed(){
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('attendanceClosedMessage').classList.remove('hidden');
+        this.updateAttendanceStatusDisplay(false);
+        state.isLoading = false;
+      },
+      updateEventTypeDisplay(){
+        const display = document.getElementById('eventTypeDisplay');
+        const label = document.getElementById('currentEventType');
+        if (state.attendanceSession?.eventType){
+          label.textContent = state.attendanceSession.eventType;
+          display.classList.remove('hidden');
+        }else{
+          display.classList.add('hidden');
+        }
+      },
+      updateAttendanceStatusDisplay(isOpen){
+        const chip = document.getElementById('attendanceStatusDisplay');
+        const text = document.getElementById('attendanceStatusText');
+        const dot = chip.querySelector('.dot');
+        chip.classList.remove('hidden');
+        if (isOpen){ text.textContent = 'Attendance Open'; dot.style.background = 'var(--success)'; }
+        else{ text.textContent = 'Attendance Closed'; dot.style.background = 'var(--danger)'; }
+      },
+      updateAdminStatus(){
+        if (!state.isAdminAuthenticated) return;
+        const statusSection = document.getElementById('attendanceStatusSection');
+        const statusDiv = document.getElementById('adminAttendanceStatus');
+        const openBtn = document.getElementById('openAttendanceBtn');
+        const closeBtn = document.getElementById('closeAttendanceBtn');
+        const manualExport = document.getElementById('manualExportSection');
+
+        const isOpen = state.attendanceSession?.isOpen;
+
+        if (isOpen){
+          statusSection.classList.add('open'); statusSection.classList.remove('closed');
+          statusDiv.innerHTML = \`
+            <strong>Status:</strong> OPEN 🟢<br>
+            <strong>Event:</strong> \${state.attendanceSession.eventType || 'Not set'}<br>
+            <strong>Opened:</strong> \${new Date(state.attendanceSession.openedAt).toLocaleTimeString()}<br>
+            <strong>Total Check-ins:</strong> <span id="checkinCount">\${state.attendanceSession.totalCheckins || 0}</span>
+          \`;
+          openBtn.classList.add('hidden'); closeBtn.classList.remove('hidden'); manualExport.classList.remove('hidden');
+        }else{
+          statusSection.classList.add('closed'); statusSection.classList.remove('open');
+          statusDiv.innerHTML = \`
+            <strong>Status:</strong> CLOSED 🔴<br>
+            <strong>Message:</strong> Attendance has not been opened for today.<br>
+            <small>Open attendance to allow check-ins for today's event.</small>
+          \`;
+          openBtn.classList.remove('hidden'); closeBtn.classList.add('hidden'); manualExport.classList.add('hidden');
+        }
+      }
+    };
+
+    // ===== Init =====
+    async function initializeApp(){
+      ui.showLoading();
+      try{
+        const [membersRes, sessionRes] = await Promise.allSettled([
+          loadMembers(), checkSessionStatus()
+        ]);
+        const sessionOpen = sessionRes.status === 'fulfilled' && sessionRes.value;
+        if (sessionOpen) ui.showForm(); else ui.showClosed();
+      }catch(err){
+        console.error('Initialization failed:', err);
+        ui.showClosed();
+        showMessage('⚠️ Unable to connect to server. Please try again later.', 'error');
+      }
+    }
+
+    // ===== Session management =====
+    async function checkSessionStatus(){
+      try{
+        const today = new Date().toISOString().split('T')[0];
+        const result = await api.call({ action:'getAttendanceSession', date: today });
+        if (result.success){
+          state.attendanceSession = result.session;
+          return state.attendanceSession?.isOpen || false;
+        }
+        return false;
+      }catch(err){
+        console.error('Session check failed:', err);
+        return false;
+      }
+    }
+
+    // ===== Members =====
+    async function loadMembers(){
+      try{
+        const result = await api.call({ action:'getMembers' });
+        if (result.success){
+          state.memberDatabase = result.members || [];
+          buildIndividualsList();
+          return true;
+        }
+        return false;
+      }catch(err){
+        console.error('Failed to load members:', err);
+        return false;
+      }
+    }
+
+    function buildIndividualsList(){
+      state.allIndividuals = [];
+      state.memberDatabase.forEach(member => {
+        state.allIndividuals.push({
+          name: member.name,
+          ageCategory: member.ageCategory,
+          contactInfo: member.contactInfo,
+          isPrimary: true,
+          family: member.family || [],
+          firstVisit: member.firstVisit,
+          totalVisits: member.totalVisits
+        });
+        (member.family || []).forEach(fm => {
+          const exists = state.allIndividuals.find(ind => ind.isPrimary && ind.name.toLowerCase() === (fm.name || '').toLowerCase());
+          if (!exists){
+            state.allIndividuals.push({
+              name: fm.name,
+              ageCategory: fm.ageCategory || 'adult',
+              contactInfo: fm.contactInfo || '',
+              isPrimary: false,
+              family: [], firstVisit:'', totalVisits:0
+            });
+          }
+        });
+      });
+      // de-dupe
+      const seen = new Set(); const unique = [];
+      for (const ind of state.allIndividuals){
+        const key = (ind.name || '').toLowerCase();
+        if (!seen.has(key)){ seen.add(key); unique.push(ind); }
+      }
+      state.allIndividuals = unique;
+    }
+
+    // ===== Form Submit =====
+    async function submitAttendance(e){
+      e.preventDefault();
+      if (!state.attendanceSession || !state.attendanceSession.isOpen){
+        showMessage('Attendance is not open. Please contact an administrator.', 'error'); return;
+      }
+
+      const name = document.getElementById('name').value.trim();
+      if (!name){ showMessage('Please enter your name', 'error'); return; }
+
+      const ageCategory = document.querySelector('input[name="ageCategory"]:checked').value;
+      const contactInfo = document.getElementById('contact').value.trim();
+      if (!contactInfo){ showMessage('Please provide contact information', 'error'); return; }
+
+      const isVisitor = document.getElementById('isVisitor').checked;
+      const withFamily = document.getElementById('withFamily').checked;
+      const visitorStatus = isVisitor ? document.getElementById('visitorStatus').value : '';
+
+      const now = new Date();
+      const date = now.toISOString().split('T')[0];
+      const time = now.toTimeString().split(' ')[0].substring(0,5);
+
+      // Collect family
+      const familyMembers = [];
+      const familyMemberData = [];
+      if (withFamily){
+        const checked = document.querySelectorAll('input[name="familyMember"]:checked');
+        checked.forEach(cb => {
+          const n = cb.value, a = cb.dataset.age, c = cb.dataset.contact;
+          familyMembers.push(n);
+          familyMemberData.push({ name:n, ageCategory:a, contactInfo:c, isVisitor, visitorStatus });
+        });
+      }
+
+      const primaryAttendanceData = {
+        timestamp: now.toISOString(),
+        id: 'web_' + Date.now(),
+        name, ageCategory, contactInfo,
+        date, time,
+        isVisitor, visitorStatus,
+        withFamily, familyMembers,
+        sessionId: state.attendanceSession.sessionId
+      };
+
+      const primaryMemberData = {
+        name, ageCategory, contactInfo,
+        family: familyMembers.map(fname => {
+          const checkbox = [...document.querySelectorAll('input[name="familyMember"]')].find(cb => cb.value === fname);
+          return { name: fname, ageCategory: checkbox ? checkbox.dataset.age : 'adult', contactInfo: checkbox ? checkbox.dataset.contact : '' };
+        }),
+        firstVisit: (isVisitor && visitorStatus === 'first_time') ? date : '',
+        totalVisits: 1
+      };
+
+      try{
+        setButtonLoading(true);
+        showMessage('Submitting attendance…', 'info');
+        const primaryResult = await api.call({ action:'addAttendance', attendanceData: primaryAttendanceData, memberData: primaryMemberData });
+        if (!primaryResult.success) throw new Error(primaryResult.error || 'Failed to submit attendance');
+
+        for (const fm of familyMemberData){
+          const familyAttendanceData = {
+            timestamp: now.toISOString(),
+            id: 'web_family_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            name: fm.name, ageCategory: fm.ageCategory, contactInfo: fm.contactInfo,
+            date, time, isVisitor: fm.isVisitor, visitorStatus: fm.visitorStatus,
+            withFamily:false, familyMembers: [],
+            sessionId: state.attendanceSession.sessionId
+          };
+          const familyMemberMemberData = {
+            name: fm.name, ageCategory: fm.ageCategory, contactInfo: fm.contactInfo,
+            family: [], firstVisit: (fm.isVisitor && fm.visitorStatus === 'first_time') ? date : '', totalVisits: 1
+          };
+          try{ await api.call({ action:'addAttendance', attendanceData: familyAttendanceData, memberData: familyMemberMemberData }); }catch(e){ console.warn('Family member failed:', fm.name, e); }
+        }
+
+        if (state.attendanceSession){
+          state.attendanceSession.totalCheckins = (state.attendanceSession.totalCheckins || 0) + 1 + familyMemberData.length;
+          const el = document.getElementById('checkinCount'); if (el) el.textContent = state.attendanceSession.totalCheckins;
+        }
+
+        let msg = \`Welcome, \${name}! \`;
+        if (isVisitor){
+          if (visitorStatus === 'first_time') msg += "We're so glad you're visiting us for the first time! 🎉";
+          else if (visitorStatus === 'been_a_while') msg += "Great to see you back after a while! 😊";
+          else msg += "Thanks for visiting us again! 🙏";
+        } else { msg += "You're checked in! 📋"; }
+        if (familyMembers.length) msg += \` Family: \${familyMembers.join(', ')}\`;
+
+        showMessage(msg, 'success');
+        resetForm();
+        setTimeout(() => { loadMembers(); }, 800);
+      }catch(err){
+        console.error('Submit error:', err);
+        showMessage('Failed to submit: ' + err.message, 'error');
+      }finally{
+        setButtonLoading(false);
+      }
+    }
+
+    // ===== Autocomplete =====
+    function handleNameInput(e){
+      const q = e.target.value.toLowerCase().trim();
+      const sug = document.getElementById('suggestions');
+      if (q.length < 2){ sug.style.display='none'; return; }
+      const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
+      if (matches.length){
+        sug.innerHTML = matches.map(p => \`<div class="suggestion-item" onclick="selectMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>\`).join('');
+        sug.style.display = 'block';
+      }else{ sug.style.display='none'; }
+    }
+    function handleFamilyNameInput(e){
+      const q = e.target.value.toLowerCase().trim();
+      const sug = document.getElementById('familySuggestions');
+      if (q.length < 2){ sug.style.display='none'; return; }
+      const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
+      if (matches.length){
+        sug.innerHTML = matches.map(p => \`<div class="suggestion-item" onclick="selectFamilyMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>\`).join('');
+        sug.style.display = 'block';
+      }else{ sug.style.display='none'; }
+    }
+    function selectMember(name){
+      document.getElementById('name').value = name;
+      document.getElementById('suggestions').style.display = 'none';
+      const individual = state.allIndividuals.find(ind => ind.name === name);
+      if (!individual) return;
+      if (individual.ageCategory){
+        const ageRadio = document.querySelector(\`input[name="ageCategory"][value="\${individual.ageCategory}"]\`);
+        if (ageRadio){ ageRadio.checked = true; toggleContactSection(); }
+      }
+      if (individual.contactInfo){ document.getElementById('contact').value = individual.contactInfo; }
+      const primary = state.memberDatabase.find(m => (m.name||'').toLowerCase() === (name||'').toLowerCase());
+      if (primary && (primary.family||[]).length){
+        document.getElementById('withFamily').checked = true;
+        toggleFamilySection();
+        loadExistingFamily(primary.family);
+      }
+    }
+    function selectFamilyMember(name){
+      document.getElementById('newFamilyMember').value = name;
+      document.getElementById('familySuggestions').style.display = 'none';
+      const ind = state.allIndividuals.find(p => p.name === name);
+      if (ind){
+        document.getElementById('newFamilyAge').value = ind.ageCategory || 'adult';
+        toggleFamilyContactField();
+        if (ind.contactInfo){
+          document.getElementById('newFamilyContact').value = ind.contactInfo;
+          document.getElementById('sameContactCheckbox').checked = false;
+        }
+      }
+    }
+
+    // ===== Family handling =====
+    function loadExistingFamily(family){
+      const wrap = document.getElementById('familyMembers'); wrap.innerHTML = '';
+      family.forEach(f => addFamilyMemberToUI(f.name, f.ageCategory || 'adult', f.contactInfo || '', true));
+    }
+    function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked=true){
+      const wrap = document.getElementById('familyMembers');
+      const ageEmoji = ({adult:'👤', youth:'🧑', child:'👶', infant:'🍼'})[ageCategory] || '👤';
+      const contactDisplay = contactInfo ? \` • \${contactInfo}\` : '';
+      const div = document.createElement('div');
+      div.className = 'family-member';
+      div.innerHTML = \`
+        <input type="checkbox" name="familyMember" value="\${name}" data-age="\${ageCategory}" data-contact="\${contactInfo}" \${isChecked?'checked':''}>
+        <div class="family-media">
+          <strong>\${ageEmoji} \${name}</strong>
+          <span class="hint">\${ageCategory.charAt(0).toUpperCase() + ageCategory.slice(1)}\${contactDisplay}</span>
+        </div>
+        <button type="button" class="remove-btn" onclick="removeFamilyMember(this)">×</button>
+      \`;
+      wrap.appendChild(div);
+    }
+    function addFamilyMember(){
+      const nameInput = document.getElementById('newFamilyMember');
+      const ageSelect = document.getElementById('newFamilyAge');
+      const contactInput = document.getElementById('newFamilyContact');
+      const same = document.getElementById('sameContactCheckbox');
+      const name = (nameInput.value || '').trim(); const ageCategory = ageSelect.value;
+      let contactInfo = (contactInput.value || '').trim();
+      if (same.checked) contactInfo = document.getElementById('contact').value.trim();
+      if (name){
+        addFamilyMemberToUI(name, ageCategory, contactInfo, true);
+        nameInput.value = ''; contactInput.value=''; same.checked=false; ageSelect.value='adult';
+        toggleFamilyContactField(); document.getElementById('familySuggestions').style.display='none';
+      }
+    }
+    function removeFamilyMember(btn){ btn.parentElement.remove(); }
+
+    // ===== Admin =====
+    function openAdminModal(){
+      const modal = document.getElementById('adminModal');
+      modal.style.display = 'flex';
+      if (state.isAdminAuthenticated){
+        document.getElementById('passwordSection').classList.add('hidden');
+        document.getElementById('adminFunctions').classList.remove('hidden');
+        ui.updateAdminStatus();
+      }else{
+        document.getElementById('passwordSection').classList.remove('hidden');
+        document.getElementById('adminFunctions').classList.add('hidden');
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+    function closeAdminModal(){ document.getElementById('adminModal').style.display = 'none'; }
+    function verifyPassword(){
+      const pwd = document.getElementById('adminPassword').value;
+      if (pwd === CONFIG.ADMIN_PASSWORD){
+        state.isAdminAuthenticated = true;
+        document.getElementById('passwordSection').classList.add('hidden');
+        document.getElementById('adminFunctions').classList.remove('hidden');
+        showMessage('Admin access granted', 'success');
+        ui.updateAdminStatus();
+      }else{
+        showMessage('Incorrect password', 'error');
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+    async function openAttendance(){
+      const select = document.getElementById('eventTypeSelect');
+      const custom = document.getElementById('customEventType');
+      let eventType = select.value;
+      if (eventType === 'Other'){
+        eventType = custom.value.trim();
+        if (!eventType){ showMessage('Please enter a custom event type', 'error'); return; }
+      }
+      try{
+        showMessage('Opening attendance session…', 'info');
+        const result = await api.call({ action:'openAttendanceSession', eventType, date: new Date().toISOString().split('T')[0] });
+        if (result.success){
+          state.attendanceSession = result.session;
+          showMessage(\`Attendance opened for: \${eventType}\`, 'success');
+          ui.showForm(); ui.updateAdminStatus(); closeAdminModal();
+        }else{ throw new Error(result.error || 'Failed to open attendance'); }
+      }catch(err){ console.error(err); showMessage('Failed to open attendance: ' + err.message, 'error'); }
+    }
+    async function closeAttendance(){
+      if (!confirm("Are you sure you want to close today's attendance? This will automatically send the attendance report and prevent further check-ins.")) return;
+      try{
+        showMessage('Closing attendance and sending report…', 'info');
+        const result = await api.call({ action:'closeAttendanceSession', date: new Date().toISOString().split('T')[0] });
+        if (result.success){
+          state.attendanceSession = null;
+          showMessage(result.message, 'success');
+          ui.showClosed(); ui.updateAdminStatus();
+        }else{ throw new Error(result.error || 'Failed to close attendance'); }
+      }catch(err){ console.error(err); showMessage('Failed to close attendance: ' + err.message, 'error'); }
+    }
+    async function exportTodayAttendance(){
+      try{
+        showMessage("Preparing today's attendance report…", 'info');
+        const result = await api.call({ action:'exportTodayAttendance' });
+        if (result.success){ showMessage(result.message, 'success'); }
+        else{ throw new Error(result.error || 'Failed to export attendance'); }
+      }catch(err){ console.error(err); showMessage('Failed to export attendance: ' + err.message, 'error'); }
+    }
+
+    // ===== Helpers =====
+    function showMessage(message, type='info'){
+      const box = document.getElementById('statusMessage');
+      box.innerHTML = \`<div class="status-message status-\${type}">\${message}</div>\`;
+      setTimeout(() => { box.innerHTML = ''; }, 5000);
+    }
+    function setButtonLoading(isLoading){
+      const btn = document.getElementById('submitBtn');
+      const text = document.getElementById('submitText');
+      const loader = document.getElementById('submitLoader');
+      if (isLoading){ btn.setAttribute('disabled',''); text.textContent = 'Submitting…'; loader.style.display='inline-block'; }
+      else{ btn.removeAttribute('disabled'); text.textContent='Check In ✅'; loader.style.display='none'; }
+    }
+    function resetForm(){
+      document.getElementById('checkinForm').reset();
+      document.getElementById('ageAdult').checked = true;
+      document.getElementById('familySection').style.display = 'none';
+      document.getElementById('visitorSection').style.display = 'none';
+      document.getElementById('contactSection').style.display = 'block';
+      document.getElementById('familyMembers').innerHTML = '';
+      document.getElementById('suggestions').style.display = 'none';
+      document.getElementById('familySuggestions').style.display = 'none';
+      document.getElementById('newFamilyAge').value = 'adult';
+      document.getElementById('sameContactCheckbox').checked = false;
+      toggleFamilyContactField();
+    }
+    function toggleContactSection(){ document.getElementById('contactSection').style.display = 'block'; }
+    function toggleFamilySection(){ const on = document.getElementById('withFamily').checked; document.getElementById('familySection').style.display = on ? 'block' : 'none'; }
+    function toggleVisitorSection(){ const on = document.getElementById('isVisitor').checked; document.getElementById('visitorSection').style.display = on ? 'block' : 'none'; }
+    function toggleFamilyContactField(){
+      const sel = document.getElementById('newFamilyAge').value;
+      const field = document.getElementById('familyContactField');
+      if (sel === 'adult' || sel === 'youth'){ field.style.display = 'block'; }
+      else{ field.style.display = 'none'; document.getElementById('newFamilyContact').value = ''; document.getElementById('sameContactCheckbox').checked = false; }
+    }
+    function handleSameContactCheckbox(){
+      const same = document.getElementById('sameContactCheckbox');
+      const input = document.getElementById('newFamilyContact');
+      const primary = document.getElementById('contact').value;
+      if (same.checked){ input.value = primary; input.style.display = 'none'; }
+      else{ input.style.display = 'block'; }
+    }
+    function toggleCustomEvent(){
+      const sel = document.getElementById('eventTypeSelect');
+      const custom = document.getElementById('customEventType');
+      if (sel.value === 'Other'){ custom.classList.remove('hidden'); custom.required = true; }
+      else{ custom.classList.add('hidden'); custom.required = false; custom.value = ''; }
+    }
+
+    // ===== Events =====
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
+
+      document.getElementById('name').addEventListener('input', handleNameInput);
+      document.getElementById('newFamilyMember').addEventListener('input', handleFamilyNameInput);
+
+      document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
+      document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
+      document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
+      document.getElementById('sameContactCheckbox').addEventListener('change', handleSameContactCheckbox);
+
+      document.querySelectorAll('input[name="ageCategory"]').forEach(r => r.addEventListener('change', toggleContactSection));
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.input-wrap')){
+          document.getElementById('suggestions').style.display = 'none';
+          document.getElementById('familySuggestions').style.display = 'none';
+        }
+      });
+
+      window.addEventListener('click', (e) => {
+        const modal = document.getElementById('adminModal'); if (e.target === modal) closeAdminModal();
+      });
+      window.addEventListener('beforeunload', () => api.cleanup());
+
+      // Start
+      toggleContactSection(); toggleFamilyContactField();
+      initializeApp();
+    });
+  </script>
 </body>
 </html>
-
