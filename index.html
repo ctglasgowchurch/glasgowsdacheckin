@@ -491,7 +491,7 @@
           script.src = `${CONFIG.SCRIPT_URL}?${params}`;
           script.async = true; script.defer = true;
 
-          timeoutId = setTimeout(() => { cleanup(); reject(new Error(\`Request timeout after \${timeout}ms\`)); }, timeout);
+          timeoutId = setTimeout(() => { cleanup(); reject(new Error('Request timeout after \${timeout}ms')); }, timeout);
 
           document.head.appendChild(script);
         });
@@ -503,7 +503,7 @@
             if (typeof res !== 'object' || res === null) throw new Error('Invalid response format');
             return res;
           }catch(err){
-            if (attempt === retries) throw new Error(\`API call failed after \${retries+1} attempts: \${err.message}\`);
+            if (attempt === retries) throw new Error('API call failed after \${retries+1} attempts: \${err.message}');
             await this.delay(CONFIG.RETRY_DELAY * Math.pow(2, attempt));
           }
         }
@@ -565,20 +565,20 @@
 
         if (isOpen){
           statusSection.classList.add('open'); statusSection.classList.remove('closed');
-          statusDiv.innerHTML = \`
+          statusDiv.innerHTML = `
             <strong>Status:</strong> OPEN 🟢<br>
             <strong>Event:</strong> \${state.attendanceSession.eventType || 'Not set'}<br>
             <strong>Opened:</strong> \${new Date(state.attendanceSession.openedAt).toLocaleTimeString()}<br>
             <strong>Total Check-ins:</strong> <span id="checkinCount">\${state.attendanceSession.totalCheckins || 0}</span>
-          \`;
+          `;
           openBtn.classList.add('hidden'); closeBtn.classList.remove('hidden'); manualExport.classList.remove('hidden');
         }else{
           statusSection.classList.add('closed'); statusSection.classList.remove('open');
-          statusDiv.innerHTML = \`
+          statusDiv.innerHTML = `
             <strong>Status:</strong> CLOSED 🔴<br>
             <strong>Message:</strong> Attendance has not been opened for today.<br>
             <small>Open attendance to allow check-ins for today's event.</small>
-          \`;
+          `;
           openBtn.classList.remove('hidden'); closeBtn.classList.add('hidden'); manualExport.classList.add('hidden');
         }
       }
@@ -747,13 +747,13 @@
           const el = document.getElementById('checkinCount'); if (el) el.textContent = state.attendanceSession.totalCheckins;
         }
 
-        let msg = \`Welcome, \${name}! \`;
+        let msg = `Welcome, \${name}! `;
         if (isVisitor){
           if (visitorStatus === 'first_time') msg += "We're so glad you're visiting us for the first time! 🎉";
           else if (visitorStatus === 'been_a_while') msg += "Great to see you back after a while! 😊";
           else msg += "Thanks for visiting us again! 🙏";
         } else { msg += "You're checked in! 📋"; }
-        if (familyMembers.length) msg += \` Family: \${familyMembers.join(', ')}\`;
+        if (familyMembers.length) msg += ` Family: \${familyMembers.join(', ')}`;
 
         showMessage(msg, 'success');
         resetForm();
@@ -773,7 +773,7 @@
       if (q.length < 2){ sug.style.display='none'; return; }
       const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
       if (matches.length){
-        sug.innerHTML = matches.map(p => \`<div class="suggestion-item" onclick="selectMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>\`).join('');
+        sug.innerHTML = matches.map(p => `<div class="suggestion-item" onclick="selectMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>`).join('');
         sug.style.display = 'block';
       }else{ sug.style.display='none'; }
     }
@@ -783,7 +783,7 @@
       if (q.length < 2){ sug.style.display='none'; return; }
       const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
       if (matches.length){
-        sug.innerHTML = matches.map(p => \`<div class="suggestion-item" onclick="selectFamilyMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>\`).join('');
+        sug.innerHTML = matches.map(p => `<div class="suggestion-item" onclick="selectFamilyMember('\${p.name.replace(/'/g, "\\'")}')">\${p.name}</div>`).join('');
         sug.style.display = 'block';
       }else{ sug.style.display='none'; }
     }
@@ -793,7 +793,7 @@
       const individual = state.allIndividuals.find(ind => ind.name === name);
       if (!individual) return;
       if (individual.ageCategory){
-        const ageRadio = document.querySelector(\`input[name="ageCategory"][value="\${individual.ageCategory}"]\`);
+        const ageRadio = document.querySelector(`input[name="ageCategory"][value="\${individual.ageCategory}"]`);
         if (ageRadio){ ageRadio.checked = true; toggleContactSection(); }
       }
       if (individual.contactInfo){ document.getElementById('contact').value = individual.contactInfo; }
@@ -826,17 +826,17 @@
     function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked=true){
       const wrap = document.getElementById('familyMembers');
       const ageEmoji = ({adult:'👤', youth:'🧑', child:'👶', infant:'🍼'})[ageCategory] || '👤';
-      const contactDisplay = contactInfo ? \` • \${contactInfo}\` : '';
+      const contactDisplay = contactInfo ? ` • \${contactInfo}` : '';
       const div = document.createElement('div');
       div.className = 'family-member';
-      div.innerHTML = \`
+      div.innerHTML = `
         <input type="checkbox" name="familyMember" value="\${name}" data-age="\${ageCategory}" data-contact="\${contactInfo}" \${isChecked?'checked':''}>
         <div class="family-media">
           <strong>\${ageEmoji} \${name}</strong>
           <span class="hint">\${ageCategory.charAt(0).toUpperCase() + ageCategory.slice(1)}\${contactDisplay}</span>
         </div>
         <button type="button" class="remove-btn" onclick="removeFamilyMember(this)">×</button>
-      \`;
+      `;
       wrap.appendChild(div);
     }
     function addFamilyMember(){
@@ -896,7 +896,7 @@
         const result = await api.call({ action:'openAttendanceSession', eventType, date: new Date().toISOString().split('T')[0] });
         if (result.success){
           state.attendanceSession = result.session;
-          showMessage(\`Attendance opened for: \${eventType}\`, 'success');
+          showMessage(`Attendance opened for: \${eventType}`, 'success');
           ui.showForm(); ui.updateAdminStatus(); closeAdminModal();
         }else{ throw new Error(result.error || 'Failed to open attendance'); }
       }catch(err){ console.error(err); showMessage('Failed to open attendance: ' + err.message, 'error'); }
@@ -925,7 +925,7 @@
     // ===== Helpers =====
     function showMessage(message, type='info'){
       const box = document.getElementById('statusMessage');
-      box.innerHTML = \`<div class="status-message status-\${type}">\${message}</div>\`;
+      box.innerHTML = `<div class="status-message status-\${type}">\${message}</div>`;
       setTimeout(() => { box.innerHTML = ''; }, 5000);
     }
     function setButtonLoading(isLoading){
