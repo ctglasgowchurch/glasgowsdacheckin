@@ -79,6 +79,29 @@
             display: inline-block;
         }
 
+        .attendance-status {
+            background: rgba(255, 255, 255, 0.2);
+            margin-top: 10px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .attendance-closed {
+            background: #dc3545;
+            color: white;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .attendance-closed h2 {
+            margin-bottom: 10px;
+        }
+
         .form-container {
             padding: 40px;
         }
@@ -314,6 +337,16 @@
             box-shadow: 0 8px 25px rgba(86, 204, 157, 0.4);
         }
 
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
         .remove-btn {
             background: #dc3545;
             color: white;
@@ -358,6 +391,12 @@
             border: 1px solid #bee5eb;
         }
 
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
         .loading {
             display: inline-block;
             width: 16px;
@@ -396,6 +435,8 @@
             max-width: 500px;
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
             position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -448,6 +489,31 @@
             margin-top: 10px;
         }
 
+        .admin-status {
+            background: #e8f4fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .admin-status h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .admin-status.closed {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .admin-status.open {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
         @media (max-width: 768px) {
             .container {
                 margin: 10px;
@@ -498,14 +564,22 @@
         <button class="admin-btn" onclick="openAdminModal()">Admin</button>
         
         <div class="header">
-            <h1>🏛️ Glasgow SDA Church</h1>
+            <h1>🛐️ Glasgow SDA Church</h1>
             <p>Welcome! Please check in below</p>
             <div id="eventTypeDisplay" class="event-type" style="display: none;">
                 📅 <span id="currentEventType"></span>
             </div>
+            <div id="attendanceStatusDisplay" class="attendance-status" style="display: none;">
+                <span id="attendanceStatusText"></span>
+            </div>
         </div>
 
-        <div class="form-container">
+        <div id="attendanceClosedMessage" class="attendance-closed hidden">
+            <h2>🔒 Attendance Not Available</h2>
+            <p>Attendance has not been opened for today yet. Please contact an administrator to begin today's attendance session.</p>
+        </div>
+
+        <div class="form-container" id="formContainer">
             <div id="statusMessage"></div>
 
             <form id="checkinForm">
@@ -604,7 +678,7 @@
     <div id="adminModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>🔐 Admin Panel</h2>
+                <h2>🔧 Admin Panel</h2>
                 <span class="close" onclick="closeAdminModal()">&times;</span>
             </div>
 
@@ -619,9 +693,15 @@
 
             <!-- Admin Functions (hidden until password verified) -->
             <div id="adminFunctions" class="hidden">
-                <!-- Event Setup -->
+                <!-- Attendance Status -->
+                <div id="attendanceStatusSection" class="admin-status">
+                    <h4>📊 Today's Attendance Status</h4>
+                    <div id="adminAttendanceStatus">Checking status...</div>
+                </div>
+
+                <!-- Event & Attendance Management -->
                 <div class="admin-section">
-                    <h3>📅 Event Setup</h3>
+                    <h3>📅 Event & Attendance Management</h3>
                     <div class="admin-form">
                         <label for="eventTypeSelect">Today's Event Type:</label>
                         <select id="eventTypeSelect" onchange="toggleCustomEvent()">
@@ -634,19 +714,27 @@
                             <option value="Other">Other</option>
                         </select>
                         <input type="text" id="customEventType" placeholder="Enter custom event type" class="custom-event-input">
-                        <button type="button" class="btn btn-primary" onclick="setEventType()">Set Event Type</button>
+                        
+                        <div id="attendanceControls">
+                            <button type="button" id="openAttendanceBtn" class="btn btn-success" onclick="openAttendance()">
+                                🔓 Open Today's Attendance
+                            </button>
+                            <button type="button" id="closeAttendanceBtn" class="btn btn-danger hidden" onclick="closeAttendance()">
+                                🔒 Close & Send Report
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Export Today's Attendance -->
-                <div class="admin-section">
-                    <h3>📧 Export Today's Attendance</h3>
+                <!-- Manual Export (only when attendance is open) -->
+                <div class="admin-section" id="manualExportSection">
+                    <h3>📧 Manual Export</h3>
                     <div class="admin-form">
-                        <button type="button" class="btn btn-success" onclick="exportTodayAttendance()">
+                        <button type="button" class="btn btn-primary" onclick="exportTodayAttendance()" id="manualExportBtn">
                             <span>Email Today's Report</span>
                         </button>
                         <small style="color: #666; margin-top: 5px;">
-                            Sends Excel file to ct.glasgow.church@gmail.com
+                            Sends CSV file to ct.glasgow.church@gmail.com
                         </small>
                     </div>
                 </div>
@@ -656,13 +744,14 @@
 
     <script>
         // === CONFIG ===
-        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx_T3wG8rAkZlHMFxdKY6z8YwAA2BHXaJ3NK1McIuhEBpRgNanBEcNHQYQ1emC7nAMN8Q/exec';
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby80eWql-CDTJzNBwnF3Vb9cMrkFrldHYmukOf6LKr4JhtB5go-XGHoe6ZPeslqdeeslA/exec';
         const ADMIN_PASSWORD = 'glasgow2025'; // Change this in production
 
         // Store loaded members - enhanced to include all individuals
         let memberDatabase = [];
         let allIndividuals = []; // All people who have ever attended (including family members)
         let isAdminAuthenticated = false;
+        let attendanceSession = null; // Stores current attendance session data
 
         // Helper function to make API calls
         const post = async (payloadObj) => {
@@ -689,6 +778,7 @@
             if (isAdminAuthenticated) {
                 document.getElementById('passwordSection').classList.add('hidden');
                 document.getElementById('adminFunctions').classList.remove('hidden');
+                loadAttendanceStatus();
             } else {
                 document.getElementById('passwordSection').classList.remove('hidden');
                 document.getElementById('adminFunctions').classList.add('hidden');
@@ -707,6 +797,7 @@
                 document.getElementById('passwordSection').classList.add('hidden');
                 document.getElementById('adminFunctions').classList.remove('hidden');
                 showMessage('Admin access granted', 'success');
+                loadAttendanceStatus();
             } else {
                 showMessage('Incorrect password', 'error');
                 document.getElementById('adminPassword').value = '';
@@ -728,7 +819,110 @@
             }
         }
 
-        async function setEventType() {
+        // Load current attendance session status
+        async function loadAttendanceStatus() {
+            try {
+                const result = await post({
+                    action: 'getAttendanceSession',
+                    date: new Date().toISOString().split('T')[0]
+                });
+
+                if (result.success) {
+                    attendanceSession = result.session;
+                    updateAttendanceUI();
+                    updateAdminUI();
+                } else {
+                    console.log('No attendance session found or error:', result.error);
+                    attendanceSession = null;
+                    updateAttendanceUI();
+                    updateAdminUI();
+                }
+            } catch (err) {
+                console.error('Failed to load attendance status:', err);
+                attendanceSession = null;
+                updateAttendanceUI();
+                updateAdminUI();
+            }
+        }
+
+        // Update the main UI based on attendance session status
+        function updateAttendanceUI() {
+            const isOpen = attendanceSession && attendanceSession.isOpen;
+            const formContainer = document.getElementById('formContainer');
+            const closedMessage = document.getElementById('attendanceClosedMessage');
+            const statusDisplay = document.getElementById('attendanceStatusDisplay');
+            const statusText = document.getElementById('attendanceStatusText');
+
+            if (isOpen) {
+                formContainer.classList.remove('hidden');
+                closedMessage.classList.add('hidden');
+                statusDisplay.style.display = 'inline-block';
+                statusText.textContent = '🟢 Attendance Open';
+                statusText.style.color = '#28a745';
+                
+                // Update event type display
+                if (attendanceSession.eventType) {
+                    updateEventTypeDisplay(attendanceSession.eventType);
+                }
+            } else {
+                formContainer.classList.add('hidden');
+                closedMessage.classList.remove('hidden');
+                statusDisplay.style.display = 'inline-block';
+                statusText.textContent = '🔴 Attendance Closed';
+                statusText.style.color = '#dc3545';
+            }
+        }
+
+        // Update admin UI based on attendance session status
+        function updateAdminUI() {
+            if (!isAdminAuthenticated) return;
+
+            const statusSection = document.getElementById('attendanceStatusSection');
+            const statusDiv = document.getElementById('adminAttendanceStatus');
+            const openBtn = document.getElementById('openAttendanceBtn');
+            const closeBtn = document.getElementById('closeAttendanceBtn');
+            const manualExportSection = document.getElementById('manualExportSection');
+            
+            const isOpen = attendanceSession && attendanceSession.isOpen;
+
+            if (isOpen) {
+                statusSection.className = 'admin-status open';
+                statusDiv.innerHTML = `
+                    <strong>Status:</strong> OPEN 🟢<br>
+                    <strong>Event:</strong> ${attendanceSession.eventType || 'Not set'}<br>
+                    <strong>Opened:</strong> ${new Date(attendanceSession.openedAt).toLocaleTimeString()}<br>
+                    <strong>Total Check-ins:</strong> <span id="checkinCount">${attendanceSession.totalCheckins || 0}</span>
+                `;
+                openBtn.classList.add('hidden');
+                closeBtn.classList.remove('hidden');
+                manualExportSection.style.display = 'block';
+                
+                // Set the event type select to match current session
+                if (attendanceSession.eventType) {
+                    const select = document.getElementById('eventTypeSelect');
+                    if ([...select.options].some(opt => opt.value === attendanceSession.eventType)) {
+                        select.value = attendanceSession.eventType;
+                    } else {
+                        select.value = 'Other';
+                        document.getElementById('customEventType').value = attendanceSession.eventType;
+                        toggleCustomEvent();
+                    }
+                }
+            } else {
+                statusSection.className = 'admin-status closed';
+                statusDiv.innerHTML = `
+                    <strong>Status:</strong> CLOSED 🔴<br>
+                    <strong>Message:</strong> Attendance has not been opened for today.<br>
+                    <small>Open attendance to allow check-ins for today's event.</small>
+                `;
+                openBtn.classList.remove('hidden');
+                closeBtn.classList.add('hidden');
+                manualExportSection.style.display = 'none';
+            }
+        }
+
+        // Open today's attendance session
+        async function openAttendance() {
             const select = document.getElementById('eventTypeSelect');
             const customInput = document.getElementById('customEventType');
             let eventType = select.value;
@@ -742,35 +936,68 @@
             }
 
             try {
+                showMessage('Opening attendance session...', 'info');
+                
                 const result = await post({
-                    action: 'setEventType',
+                    action: 'openAttendanceSession',
                     eventType: eventType,
                     date: new Date().toISOString().split('T')[0]
                 });
 
                 if (result.success) {
-                    showMessage(`Event type set to: ${eventType}`, 'success');
-                    updateEventTypeDisplay(eventType);
+                    attendanceSession = result.session;
+                    showMessage(`Attendance opened for: ${eventType}`, 'success');
+                    updateAttendanceUI();
+                    updateAdminUI();
                     closeAdminModal();
                 } else {
-                    throw new Error(result.error || 'Failed to set event type');
+                    throw new Error(result.error || 'Failed to open attendance');
                 }
             } catch (err) {
-                console.error('Set event type error:', err);
-                showMessage('Failed to set event type: ' + err.message, 'error');
+                console.error('Open attendance error:', err);
+                showMessage('Failed to open attendance: ' + err.message, 'error');
             }
         }
 
-        function updateEventTypeDisplay(eventType) {
-            if (eventType) {
-                document.getElementById('currentEventType').textContent = eventType;
-                document.getElementById('eventTypeDisplay').style.display = 'inline-block';
-            } else {
-                document.getElementById('eventTypeDisplay').style.display = 'none';
+        // Close today's attendance session and send report
+        async function closeAttendance() {
+            if (!confirm('Are you sure you want to close today\'s attendance? This will automatically send the attendance report and prevent further check-ins.')) {
+                return;
+            }
+
+            try {
+                showMessage('Closing attendance and sending report...', 'info');
+                
+                const result = await post({
+                    action: 'closeAttendanceSession',
+                    date: new Date().toISOString().split('T')[0]
+                });
+
+                if (result.success) {
+                    attendanceSession = null;
+                    showMessage(result.message, 'success');
+                    updateAttendanceUI();
+                    updateAdminUI();
+                    
+                    // Show notification in admin panel
+                    const statusDiv = document.getElementById('adminAttendanceStatus');
+                    statusDiv.innerHTML += `<br><br><div style="background: #d4edda; padding: 10px; border-radius: 5px; color: #155724; margin-top: 10px;"><strong>✅ Report Sent!</strong><br>${result.message}</div>`;
+                } else {
+                    throw new Error(result.error || 'Failed to close attendance');
+                }
+            } catch (err) {
+                console.error('Close attendance error:', err);
+                showMessage('Failed to close attendance: ' + err.message, 'error');
             }
         }
 
+        // Manual export (only available when attendance is open)
         async function exportTodayAttendance() {
+            if (!attendanceSession || !attendanceSession.isOpen) {
+                showMessage('Attendance must be open to export report', 'error');
+                return;
+            }
+
             try {
                 showMessage('Preparing today\'s attendance report...', 'info');
                 
@@ -780,7 +1007,18 @@
 
                 if (result.success) {
                     showMessage(result.message, 'success');
-                    closeAdminModal();
+                    
+                    // Show notification in admin panel
+                    const statusDiv = document.getElementById('adminAttendanceStatus');
+                    const notification = document.createElement('div');
+                    notification.style.cssText = 'background: #d4edda; padding: 10px; border-radius: 5px; color: #155724; margin-top: 10px;';
+                    notification.innerHTML = `<strong>✅ Report Sent!</strong><br>${result.message}`;
+                    statusDiv.appendChild(notification);
+                    
+                    // Remove notification after 10 seconds
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 10000);
                 } else {
                     throw new Error(result.error || 'Failed to export attendance');
                 }
@@ -790,19 +1028,12 @@
             }
         }
 
-        // Load today's event type
-        async function loadTodayEventType() {
-            try {
-                const result = await post({
-                    action: 'getTodayEventType',
-                    date: new Date().toISOString().split('T')[0]
-                });
-
-                if (result.success && result.eventType) {
-                    updateEventTypeDisplay(result.eventType);
-                }
-            } catch (err) {
-                console.log('No event type set for today or error loading:', err);
+        function updateEventTypeDisplay(eventType) {
+            if (eventType) {
+                document.getElementById('currentEventType').textContent = eventType;
+                document.getElementById('eventTypeDisplay').style.display = 'inline-block';
+            } else {
+                document.getElementById('eventTypeDisplay').style.display = 'none';
             }
         }
 
@@ -1120,9 +1351,15 @@
             }
         }
 
-        // Enhanced attendance submission with individual family member entries
+        // Enhanced attendance submission with session validation
         async function submitAttendance(e) {
             e.preventDefault();
+            
+            // Check if attendance session is open
+            if (!attendanceSession || !attendanceSession.isOpen) {
+                showMessage('Attendance is not open. Please contact an administrator.', 'error');
+                return;
+            }
             
             const name = document.getElementById('name').value.trim();
             if (!name) {
@@ -1200,7 +1437,8 @@
                 isVisitor,
                 visitorStatus,
                 withFamily,
-                familyMembers
+                familyMembers,
+                sessionId: attendanceSession.sessionId
             };
 
             // Primary person's member data
@@ -1248,7 +1486,8 @@
                         isVisitor: familyMember.isVisitor,
                         visitorStatus: familyMember.visitorStatus,
                         withFamily: false,
-                        familyMembers: []
+                        familyMembers: [],
+                        sessionId: attendanceSession.sessionId
                     };
                     
                     const familyMemberMemberData = {
@@ -1268,6 +1507,15 @@
                     
                     if (!familyResult.success) {
                         console.warn(`Failed to submit attendance for family member ${familyMember.name}:`, familyResult.error);
+                    }
+                }
+                
+                // Update session count if in admin panel
+                if (isAdminAuthenticated && attendanceSession) {
+                    attendanceSession.totalCheckins = (attendanceSession.totalCheckins || 0) + 1 + familyMemberData.length;
+                    const countElement = document.getElementById('checkinCount');
+                    if (countElement) {
+                        countElement.textContent = attendanceSession.totalCheckins;
                     }
                 }
                 
@@ -1357,7 +1605,7 @@
             loadMembers().catch(() => {
                 console.log('Failed to load members on startup');
             });
-            loadTodayEventType();
+            loadAttendanceStatus();
         });
     </script>
 </body>
