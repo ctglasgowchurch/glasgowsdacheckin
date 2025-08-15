@@ -207,6 +207,28 @@
             margin-top: 10px;
         }
 
+        .family-name-container {
+            position: relative;
+        }
+
+        .same-contact-option {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .same-contact-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .same-contact-option label {
+            font-size: 0.9em;
+            color: #666;
+            margin: 0;
+        }
+
         .btn {
             padding: 12px 25px;
             border: none;
@@ -373,14 +395,6 @@
                             <input type="radio" id="ageYouth" name="ageCategory" value="youth">
                             <label for="ageYouth">Youth (13-17)</label>
                         </div>
-                        <div class="checkbox-group">
-                            <input type="radio" id="ageChild" name="ageCategory" value="child">
-                            <label for="ageChild">Child (5-12)</label>
-                        </div>
-                        <div class="checkbox-group">
-                            <input type="radio" id="ageInfant" name="ageCategory" value="infant">
-                            <label for="ageInfant">Infant (0-4)</label>
-                        </div>
                     </div>
                 </div>
 
@@ -401,8 +415,9 @@
                     <div class="add-family-section">
                         <h4>Add Family Member</h4>
                         <div class="add-family-form">
-                            <div>
-                                <input type="text" id="newFamilyMember" placeholder="Family member name">
+                            <div class="family-name-container">
+                                <input type="text" id="newFamilyMember" placeholder="Family member name" autocomplete="off">
+                                <div id="familySuggestions" class="suggestions"></div>
                             </div>
                             <div>
                                 <select id="newFamilyAge">
@@ -412,8 +427,12 @@
                                     <option value="infant">Infant</option>
                                 </select>
                             </div>
-                            <div class="family-contact-field hidden" id="familyContactField">
-                                <input type="text" id="newFamilyContact" placeholder="Contact info (for adults/youth)">
+                            <div class="family-contact-field" id="familyContactField">
+                                <input type="text" id="newFamilyContact" placeholder="Contact info">
+                                <div class="same-contact-option">
+                                    <input type="checkbox" id="sameContactCheckbox">
+                                    <label for="sameContactCheckbox">Same as above</label>
+                                </div>
                             </div>
                             <div style="grid-column: 1 / -1; margin-top: 10px;">
                                 <button type="button" class="btn btn-secondary" onclick="addFamilyMember()">Add Family Member</button>
@@ -449,8 +468,9 @@
         // === CONFIG ===
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzOCSNQczLRu6zLRKq0wSiCLo-8HI_Y11mDEqht0Qh7fbi2hbhO7eb_YayeppJj6pm32Q/exec';
 
-        // Store loaded members
+        // Store loaded members - enhanced to include all individuals
         let memberDatabase = [];
+        let allIndividuals = []; // All people who have ever attended (including family members)
 
         // Helper function to make API calls
         const post = async (payloadObj) => {
@@ -471,14 +491,15 @@
             }, 5000);
         }
 
-        // Load members from Google Sheets
+        // Load members from Google Sheets and build comprehensive individual list
         async function loadMembers() {
             try {
                 const result = await post({ action: 'getMembers' });
                 if (!result.success) throw new Error(result.error || 'Unknown error');
                 
                 memberDatabase = result.members || [];
-                console.log(`Loaded ${memberDatabase.length} members from Google Sheets`);
+                buildIndividualsList();
+                console.log(`Loaded ${memberDatabase.length} members, ${allIndividuals.length} total individuals`);
                 
                 return true;
             } catch (err) {
@@ -487,7 +508,60 @@
             }
         }
 
-        // Handle name input for suggestions
+        // Build comprehensive list of all individuals (primary members + family members)
+        function buildIndividualsList() {
+            allIndividuals = [];
+            
+            // Add all primary members
+            memberDatabase.forEach(member => {
+                allIndividuals.push({
+                    name: member.name,
+                    ageCategory: member.ageCategory,
+                    contactInfo: member.contactInfo,
+                    isPrimary: true,
+                    family: member.family || [],
+                    firstVisit: member.firstVisit,
+                    totalVisits: member.totalVisits
+                });
+                
+                // Add all family members as individuals
+                if (member.family && member.family.length > 0) {
+                    member.family.forEach(familyMember => {
+                        // Check if this family member is already in allIndividuals as a primary member
+                        const existingPrimary = allIndividuals.find(ind => 
+                            ind.isPrimary && ind.name.toLowerCase() === familyMember.name.toLowerCase()
+                        );
+                        
+                        if (!existingPrimary) {
+                            allIndividuals.push({
+                                name: familyMember.name,
+                                ageCategory: familyMember.ageCategory || 'adult',
+                                contactInfo: familyMember.contactInfo || '',
+                                isPrimary: false,
+                                family: [], // Will be populated if they become primary
+                                firstVisit: '',
+                                totalVisits: 0
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // Remove duplicates by name (case insensitive)
+            const uniqueIndividuals = [];
+            const seen = new Set();
+            allIndividuals.forEach(individual => {
+                const lowerName = individual.name.toLowerCase();
+                if (!seen.has(lowerName)) {
+                    seen.add(lowerName);
+                    uniqueIndividuals.push(individual);
+                }
+            });
+            
+            allIndividuals = uniqueIndividuals;
+        }
+
+        // Enhanced name input handler for main name field
         function handleNameInput(e) {
             const query = e.target.value.toLowerCase().trim();
             const suggestions = document.getElementById('suggestions');
@@ -497,14 +571,14 @@
                 return;
             }
 
-            const matches = memberDatabase.filter(member => 
-                member.name.toLowerCase().includes(query) ||
-                member.name.toLowerCase().startsWith(query)
-            ).slice(0, 5);
+            const matches = allIndividuals.filter(individual => 
+                individual.name.toLowerCase().includes(query) ||
+                individual.name.toLowerCase().startsWith(query)
+            ).slice(0, 8);
 
             if (matches.length > 0) {
-                suggestions.innerHTML = matches.map(member => 
-                    `<div class="suggestion-item" onclick="selectMember('${member.name.replace(/'/g, "\\'")}')">${member.name}</div>`
+                suggestions.innerHTML = matches.map(individual => 
+                    `<div class="suggestion-item" onclick="selectMember('${individual.name.replace(/'/g, "\\'")}')">${individual.name}</div>`
                 ).join('');
                 suggestions.style.display = 'block';
             } else {
@@ -512,69 +586,130 @@
             }
         }
 
-        // Select a member from suggestions
+        // Enhanced name input handler for family member field
+        function handleFamilyNameInput(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const suggestions = document.getElementById('familySuggestions');
+            
+            if (query.length < 2) {
+                suggestions.style.display = 'none';
+                return;
+            }
+
+            const matches = allIndividuals.filter(individual => 
+                individual.name.toLowerCase().includes(query) ||
+                individual.name.toLowerCase().startsWith(query)
+            ).slice(0, 8);
+
+            if (matches.length > 0) {
+                suggestions.innerHTML = matches.map(individual => 
+                    `<div class="suggestion-item" onclick="selectFamilyMember('${individual.name.replace(/'/g, "\\'")}')">${individual.name}</div>`
+                ).join('');
+                suggestions.style.display = 'block';
+            } else {
+                suggestions.style.display = 'none';
+            }
+        }
+
+        // Enhanced member selection with full form auto-population
         function selectMember(name) {
             document.getElementById('name').value = name;
             document.getElementById('suggestions').style.display = 'none';
             
-            const member = memberDatabase.find(m => m.name === name);
-            if (member) {
+            // Find the individual in our comprehensive list
+            const individual = allIndividuals.find(ind => ind.name === name);
+            if (!individual) return;
+            
+            // Auto-populate age category
+            if (individual.ageCategory) {
+                const ageRadio = document.querySelector(`input[name="ageCategory"][value="${individual.ageCategory}"]`);
+                if (ageRadio) {
+                    ageRadio.checked = true;
+                    toggleContactSection();
+                }
+            }
+            
+            // Auto-populate contact info
+            if (individual.contactInfo) {
+                document.getElementById('contact').value = individual.contactInfo;
+            }
+            
+            // Find if this person is a primary member to get their family
+            const primaryMember = memberDatabase.find(m => m.name.toLowerCase() === name.toLowerCase());
+            if (primaryMember && primaryMember.family && primaryMember.family.length > 0) {
+                document.getElementById('withFamily').checked = true;
+                toggleFamilySection();
+                loadExistingFamily(primaryMember.family);
+            }
+        }
+
+        // Select family member from suggestions and auto-populate
+        function selectFamilyMember(name) {
+            document.getElementById('newFamilyMember').value = name;
+            document.getElementById('familySuggestions').style.display = 'none';
+            
+            // Find the individual and auto-populate their details
+            const individual = allIndividuals.find(ind => ind.name === name);
+            if (individual) {
                 // Set age category
-                if (member.ageCategory) {
-                    const ageRadio = document.querySelector(`input[name="ageCategory"][value="${member.ageCategory}"]`);
-                    if (ageRadio) {
-                        ageRadio.checked = true;
-                        toggleContactSection();
-                    }
-                }
+                document.getElementById('newFamilyAge').value = individual.ageCategory || 'adult';
+                toggleFamilyContactField();
                 
-                // Set contact info
-                if (member.contactInfo) {
-                    document.getElementById('contact').value = member.contactInfo;
-                }
-                
-                // Load family members
-                if (member.family && member.family.length > 0) {
-                    document.getElementById('withFamily').checked = true;
-                    toggleFamilySection();
-                    loadExistingFamily(member.family);
+                // Set contact info if available
+                if (individual.contactInfo) {
+                    document.getElementById('newFamilyContact').value = individual.contactInfo;
+                    document.getElementById('sameContactCheckbox').checked = false;
                 }
             }
         }
 
-        // Load existing family members
+        // Enhanced family loading with pre-checked members
         function loadExistingFamily(family) {
             const familyContainer = document.getElementById('familyMembers');
             familyContainer.innerHTML = '';
             
-            family.forEach((familyMember, index) => {
-                addFamilyMemberToUI(familyMember.name, familyMember.ageCategory || 'adult', familyMember.contactInfo || '', true);
+            family.forEach((familyMember) => {
+                addFamilyMemberToUI(
+                    familyMember.name, 
+                    familyMember.ageCategory || 'adult', 
+                    familyMember.contactInfo || '', 
+                    true // Pre-check all known family members
+                );
             });
         }
 
-        // Toggle contact section based on age
+        // Toggle contact section based on age (only Adult/Youth now)
         function toggleContactSection() {
             const selectedAge = document.querySelector('input[name="ageCategory"]:checked').value;
             const contactSection = document.getElementById('contactSection');
-            
-            if (selectedAge === 'child' || selectedAge === 'infant') {
-                contactSection.style.display = 'none';
-                document.getElementById('contact').value = '';
-            } else {
-                contactSection.style.display = 'block';
-            }
+            contactSection.style.display = 'block'; // Always show for Adult/Youth
         }
 
-        // Toggle family contact field
+        // Enhanced family contact field toggle with "same as above" functionality
         function toggleFamilyContactField() {
             const selectedAge = document.getElementById('newFamilyAge').value;
             const contactField = document.getElementById('familyContactField');
             
             if (selectedAge === 'adult' || selectedAge === 'youth') {
-                contactField.classList.remove('hidden');
+                contactField.style.display = 'block';
             } else {
-                contactField.classList.add('hidden');
+                contactField.style.display = 'none';
                 document.getElementById('newFamilyContact').value = '';
+                document.getElementById('sameContactCheckbox').checked = false;
+            }
+        }
+
+        // Handle "same as above" checkbox for family contact
+        function handleSameContactCheckbox() {
+            const checkbox = document.getElementById('sameContactCheckbox');
+            const contactInput = document.getElementById('newFamilyContact');
+            const primaryContact = document.getElementById('contact').value;
+            
+            if (checkbox.checked) {
+                contactInput.value = primaryContact;
+                contactInput.style.display = 'none';
+            } else {
+                contactInput.style.display = 'block';
             }
         }
 
@@ -592,7 +727,7 @@
             visitorSection.style.display = isChecked ? 'block' : 'none';
         }
 
-        // Add family member to UI
+        // Enhanced family member UI creation
         function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked = true) {
             const familyContainer = document.getElementById('familyMembers');
             const memberDiv = document.createElement('div');
@@ -619,15 +754,21 @@
             familyContainer.appendChild(memberDiv);
         }
 
-        // Add family member
+        // Add family member with enhanced logic
         function addFamilyMember() {
             const nameInput = document.getElementById('newFamilyMember');
             const ageSelect = document.getElementById('newFamilyAge');
             const contactInput = document.getElementById('newFamilyContact');
+            const sameContactCheckbox = document.getElementById('sameContactCheckbox');
             
             const name = nameInput.value.trim();
             const ageCategory = ageSelect.value;
-            const contactInfo = contactInput.value.trim();
+            let contactInfo = contactInput.value.trim();
+            
+            // Use primary contact if "same as above" is checked
+            if (sameContactCheckbox.checked) {
+                contactInfo = document.getElementById('contact').value.trim();
+            }
             
             if (name) {
                 addFamilyMemberToUI(name, ageCategory, contactInfo, true);
@@ -635,8 +776,10 @@
                 // Clear inputs
                 nameInput.value = '';
                 contactInput.value = '';
+                sameContactCheckbox.checked = false;
                 ageSelect.value = 'adult';
                 toggleFamilyContactField();
+                document.getElementById('familySuggestions').style.display = 'none';
             }
         }
 
@@ -645,7 +788,7 @@
             button.parentElement.remove();
         }
 
-        // Submit form
+        // Enhanced attendance submission with individual family member entries
         async function submitAttendance(e) {
             e.preventDefault();
             
@@ -659,7 +802,7 @@
             const contactInfo = document.getElementById('contact').value.trim();
             
             // Validate contact info for adults and youth
-            if ((ageCategory === 'adult' || ageCategory === 'youth') && !contactInfo) {
+            if (!contactInfo) {
                 showMessage('Please provide contact information', 'error');
                 return;
             }
@@ -673,16 +816,48 @@
             const date = now.toISOString().split('T')[0];
             const time = now.toTimeString().split(' ')[0].substring(0, 5);
 
-            // Collect family members
+            // Collect checked family members with full details
             const familyMembers = [];
+            const familyMemberData = [];
+            
             if (withFamily) {
                 const checkedFamily = document.querySelectorAll('input[name="familyMember"]:checked');
                 checkedFamily.forEach(checkbox => {
-                    familyMembers.push(checkbox.value); // Just the name as string
+                    const memberName = checkbox.value;
+                    const memberAge = checkbox.dataset.age;
+                    const memberContact = checkbox.dataset.contact;
+                    
+                    familyMembers.push(memberName);
+                    
+                    // Create individual entry for each family member
+                    const existingIndividual = allIndividuals.find(ind => 
+                        ind.name.toLowerCase() === memberName.toLowerCase()
+                    );
+                    
+                    // Determine visitor status for family member
+                    let familyMemberIsVisitor = false;
+                    let familyMemberVisitorStatus = '';
+                    
+                    if (!existingIndividual || existingIndividual.totalVisits === 0) {
+                        // New family member inherits primary person's visitor status
+                        familyMemberIsVisitor = isVisitor;
+                        familyMemberVisitorStatus = visitorStatus;
+                    }
+                    
+                    familyMemberData.push({
+                        name: memberName,
+                        ageCategory: memberAge,
+                        contactInfo: memberContact,
+                        isVisitor: familyMemberIsVisitor,
+                        visitorStatus: familyMemberVisitorStatus,
+                        withFamily: false, // Family members don't have their own families in this context
+                        familyMembers: []
+                    });
                 });
             }
 
-            const attendanceData = {
+            // Primary person's attendance data
+            const primaryAttendanceData = {
                 timestamp: now.toISOString(),
                 id: 'web_' + Date.now(),
                 name,
@@ -696,11 +871,19 @@
                 familyMembers
             };
 
-            const memberData = {
+                            // Primary person's member data
+            const primaryMemberData = {
                 name,
                 ageCategory,
                 contactInfo,
-                family: familyMembers,
+                family: familyMembers.map(fname => {
+                    const checkbox = [...document.querySelectorAll('input[name="familyMember"]')].find(cb => cb.value === fname);
+                    return {
+                        name: fname,
+                        ageCategory: checkbox ? checkbox.dataset.age : 'adult',
+                        contactInfo: checkbox ? checkbox.dataset.contact : ''
+                    };
+                }),
                 firstVisit: isVisitor && visitorStatus === 'first_time' ? date : '',
                 totalVisits: 1
             };
@@ -708,14 +891,51 @@
             try {
                 showMessage('Submitting attendance...', 'info');
                 
-                const result = await post({
+                // Submit primary person's attendance
+                const primaryResult = await post({
                     action: 'addAttendance',
-                    attendanceData,
-                    memberData
+                    attendanceData: primaryAttendanceData,
+                    memberData: primaryMemberData
                 });
                 
-                if (!result.success) {
-                    throw new Error(result.error || 'Unknown error');
+                if (!primaryResult.success) {
+                    throw new Error(primaryResult.error || 'Failed to submit primary attendance');
+                }
+                
+                // Submit each family member as individual attendance and member entry
+                for (const familyMember of familyMemberData) {
+                    const familyAttendanceData = {
+                        timestamp: now.toISOString(),
+                        id: 'web_family_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        name: familyMember.name,
+                        ageCategory: familyMember.ageCategory,
+                        contactInfo: familyMember.contactInfo,
+                        date,
+                        time,
+                        isVisitor: familyMember.isVisitor,
+                        visitorStatus: familyMember.visitorStatus,
+                        withFamily: false,
+                        familyMembers: []
+                    };
+                    
+                    const familyMemberMemberData = {
+                        name: familyMember.name,
+                        ageCategory: familyMember.ageCategory,
+                        contactInfo: familyMember.contactInfo,
+                        family: [], // Individual family members don't store family data in this context
+                        firstVisit: familyMember.isVisitor && familyMember.visitorStatus === 'first_time' ? date : '',
+                        totalVisits: 1
+                    };
+                    
+                    const familyResult = await post({
+                        action: 'addAttendance',
+                        attendanceData: familyAttendanceData,
+                        memberData: familyMemberMemberData
+                    });
+                    
+                    if (!familyResult.success) {
+                        console.warn(`Failed to submit attendance for family member ${familyMember.name}:`, familyResult.error);
+                    }
                 }
                 
                 // Success message
@@ -729,7 +949,7 @@
                         message += "Thanks for visiting us again! 🙏";
                     }
                 } else {
-                    message += "You're checked in! 📝";
+                    message += "You're checked in! 📋";
                 }
                 
                 if (familyMembers.length > 0) {
@@ -738,8 +958,11 @@
                 
                 showMessage(message, 'success');
                 
-                // Reset form
+                // Reset form and reload member database
                 resetForm();
+                setTimeout(() => {
+                    loadMembers(); // Refresh the database with new entries
+                }, 1000);
                 
             } catch (err) {
                 console.error('Submit error:', err);
@@ -756,16 +979,20 @@
             document.getElementById('contactSection').style.display = 'block';
             document.getElementById('familyMembers').innerHTML = '';
             document.getElementById('suggestions').style.display = 'none';
+            document.getElementById('familySuggestions').style.display = 'none';
             document.getElementById('newFamilyAge').value = 'adult';
+            document.getElementById('sameContactCheckbox').checked = false;
             toggleFamilyContactField();
         }
 
         // Event listeners
         document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
         document.getElementById('name').addEventListener('input', handleNameInput);
+        document.getElementById('newFamilyMember').addEventListener('input', handleFamilyNameInput);
         document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
         document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
         document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
+        document.getElementById('sameContactCheckbox').addEventListener('change', handleSameContactCheckbox);
         
         // Age category radio buttons
         document.querySelectorAll('input[name="ageCategory"]').forEach(radio => {
@@ -774,8 +1001,9 @@
 
         // Close suggestions when clicking outside
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.input-container')) {
+            if (!e.target.closest('.input-container') && !e.target.closest('.family-name-container')) {
                 document.getElementById('suggestions').style.display = 'none';
+                document.getElementById('familySuggestions').style.display = 'none';
             }
         });
 
