@@ -1,0 +1,2086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glasgow SDA Church – Check-In</title>
+  <!-- Use a version that ships /build/ -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js" defer></script>
+
+  <!-- Typography -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ======= Design tokens ======= */
+    :root{
+      --bg: #0b1020;
+      --bg-elev: #0f162d;
+      --card: #101729;
+      --text: #e6e8ee;
+      --muted: #9aa3b2;
+      --accent: #4f8cff;
+      --accent-2: #22d3ee;
+      --danger: #ef4444;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --ring: rgba(79,140,255,.35);
+      --border: rgba(255,255,255,.08);
+      --shadow: 0 10px 24px rgba(0,0,0,.35), 0 2px 6px rgba(0,0,0,.25);
+      --radius-xl: 18px;
+      --radius-lg: 14px;
+      --radius-md: 12px;
+      --radius-sm: 10px;
+      --maxw: 860px;
+      --focus: 0 0 0 3px var(--ring);
+    }
+
+    * { box-sizing: border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1100px 600px at 10% -10%, rgba(79,140,255,.18), transparent 60%),
+        radial-gradient(900px 500px at 90% 30%, rgba(34,211,238,.18), transparent 60%),
+        linear-gradient(180deg, #0a0f20, #0b1020 40%, #0a0f1e);
+      padding: 24px;
+      display:flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ======= Card layout ======= */
+    .container{
+      width:100%;
+      max-width: var(--maxw);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01)) border-box, #0c1326;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+      isolation:isolate;
+    }
+
+    .header{
+      position: relative;
+      padding: 28px 28px 22px;
+      background:
+        radial-gradient(800px 300px at 0% 0%, rgba(34,211,238,.15), transparent 60%),
+        radial-gradient(800px 300px at 100% -10%, rgba(79,140,255,.25), transparent 60%);
+      border-bottom: 1px solid var(--border);
+    }
+    .header h1{
+      font-size: clamp(20px, 5vw, 28px);
+      letter-spacing: .2px;
+      font-weight: 700;
+      margin:0 0 6px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .header p{
+      margin:0;
+      color: var(--muted);
+      font-weight:500;
+    }
+
+    .admin-btn {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      z-index: 100; /* Ensures it's above header and form layers */
+    }
+    .badges{
+      margin-top: 14px;
+      display:flex; gap:10px; flex-wrap: wrap;
+    }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      font-size: 13px; font-weight:600;
+    }
+    .chip .dot{ width:8px; height:8px; border-radius:50%; background: var(--success); box-shadow: 0 0 0 4px rgba(34,197,94,.15);}
+    .chip.closed .dot{ background: var(--danger); box-shadow: 0 0 0 4px rgba(239,68,68,.15);}
+
+    /* Floating Admin button */
+    .admin-btn{
+      position:absolute; top:18px; right:18px;
+      appearance:none; border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-weight: 700; letter-spacing:.2px;
+      cursor:pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+    .admin-btn:hover{ transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.25); border-color: rgba(255,255,255,.18); }
+    .admin-btn:active{ transform: translateY(0); }
+
+    /* ======= Sections ======= */
+    .section{
+      padding: 28px;
+    }
+    .loading-screen{
+      text-align:center; padding: 48px 28px;
+      display:flex; flex-direction:column; align-items:center; gap:16px;
+    }
+    .spinner{
+      width:48px; height:48px; border-radius:50%;
+      border: 3px solid rgba(255,255,255,.08);
+      border-top-color: var(--accent);
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin{ to{ transform: rotate(360deg);} }
+
+    .attendance-closed{
+      background: linear-gradient(180deg, rgba(239,68,68,.12), rgba(239,68,68,.06));
+      border: 1px solid rgba(239,68,68,.35);
+      color: #ffe8e8;
+      padding: 18px;
+      border-radius: var(--radius-lg);
+    }
+
+    .offline-indicator{
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: var(--warning);
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 1000;
+      display: none;
+    }
+
+    /* ======= Forms ======= */
+    .form-grid{ display:grid; gap: 22px; }
+    .form-group{ display:flex; flex-direction:column; gap:10px; }
+    .form-group label{ font-weight: 600; color: var(--text); }
+    .hint{ color: var(--muted); font-size: 12px; }
+
+    .input-wrap{ position:relative; }
+    .input, select{
+      width:100%;
+      padding: 14px 16px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      transition: box-shadow .15s ease, border-color .2s ease, background .2s ease;
+      outline: none;
+    }
+    .input:focus, select:focus{ box-shadow: var(--focus); border-color: var(--accent); background: rgba(255,255,255,.06); }
+    .input::placeholder{ color: #8b93a7; }
+
+    .radio-row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .choice{
+      display:flex; align-items:center; gap:10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 10px 12px; border-radius: 12px;
+    }
+    .choice input{ width:18px; height:18px; accent-color: var(--accent); }
+
+    /* FIXED: Inline checkboxes */
+    .checkbox{ 
+      display:flex; 
+      align-items:center; 
+      gap:12px; 
+      text-align: left; 
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 14px; 
+      border-radius: 12px;
+    }
+    .checkbox input{ width:18px; height:18px; accent-color: var(--accent); }
+    .checkbox label{ font-weight: 500; margin: 0; }
+    .soft{
+      background: rgba(255,255,255,.04);
+      border: 1px solid var(--border);
+      padding: 14px; border-radius: 12px;
+    }
+
+    /* Suggestions dropdown */
+    .suggestions{
+      position:absolute; inset-inline:0; top: calc(100% + 6px);
+      background: #104641; border:1px solid var(--border); border-radius: 12px;
+      box-shadow: var(--shadow); overflow:hidden; display:none; z-index: 40;
+      max-height: 240px; overflow-y:auto; color: whitesmoke;
+    }
+    .suggestion-item{
+      padding: 12px 14px; cursor:pointer; border-bottom: 1px solid var(--border);
+    }
+    .suggestion-item:last-child{ border-bottom:none; }
+    .suggestion-item:hover{ background: rgba(255,255,255,.04); }
+
+    /* Family block */
+    .family-section, .visitor-section{ display:none; }
+    .family-media{ display:flex; align-items:center; gap:12px; }
+    .family-member{
+      display:flex; align-items:center; gap:12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.02);
+      padding: 12px; border-radius: 12px;
+    }
+    .remove-btn{
+      background: rgba(239,68,68,.9); color:white; border:0;
+      width:28px; height:28px; border-radius: 8px; cursor:pointer;
+    }
+
+    /* Buttons */
+    .btn{
+      appearance:none; border:1px solid var(--border); background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-weight: 700; letter-spacing:.25px;
+      cursor:pointer;
+      transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.25); border-color: rgba(255,255,255,.18); }
+    .btn:active{ transform: translateY(0); }
+    .btn[disabled]{ opacity:.6; cursor:not-allowed; transform: none; }
+    .btn-primary{ background: linear-gradient(180deg, rgba(79,140,255,.18), rgba(79,140,255,.12)); border-color: rgba(79,140,255,.45); }
+    .btn-success{ background: linear-gradient(180deg, rgba(34,197,94,.2), rgba(34,197,94,.1)); border-color: rgba(34,197,94,.5); width:100%; padding: 16px 22px; font-size: 18px; }
+    .btn-danger{ background: linear-gradient(180deg, rgba(239,68,68,.18), rgba(239,68,68,.12)); border-color: rgba(239,68,68,.45); }
+
+    /* Status / toast */
+    #statusMessage{ position: sticky; top: 0; z-index: 3; }
+    .status-message{
+      margin-bottom:14px; border-radius:12px; padding: 16px 18px; font-weight:600; letter-spacing:.2px; text-align:left;
+      border:1px solid var(--border);
+      line-height: 1.4;
+    }
+    .status-success{ background: rgba(34,197,94,.12); color: #cff6db; border-color: rgba(34,197,94,.35); }
+    .status-error{ background: rgba(239,68,68,.12); color: #ffd7d7; border-color: rgba(239,68,68,.35); }
+    .status-info{ background: rgba(79,140,255,.12); color: #dbe7ff; border-color: rgba(79,140,255,.35); }
+    .status-warning{ background: rgba(245,158,11,.12); color: #ffe6c2; border-color: rgba(245,158,11,.40); }
+
+    .welcome-name {
+      font-size: 1.1em;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .family-list {
+      margin-top: 6px;
+      font-size: 0.95em;
+      opacity: 0.9;
+    }
+
+    /* Modal */
+    .modal{ position: fixed; inset:0; display:none; align-items:center; justify-content:center; backdrop-filter: blur(6px); background: rgba(3,6,12,.55); z-index:50; }
+    .modal-content{
+      background: #0c1326; border:1px solid var(--border); border-radius: 16px; width:min(560px, 92vw);
+      box-shadow: var(--shadow); max-height: 85vh; overflow:auto;
+      padding: 22px 22px;
+      animation: pop .16s ease;
+    }
+    @keyframes pop{ from{ transform: translateY(6px); opacity:.7 } }
+    .modal-header{ display:flex; align-items:center; justify-content:space-between; padding-bottom:10px; border-bottom: 1px solid var(--border); margin-bottom:16px; }
+    .close{ border: 1px solid var(--border); border-radius: 10px; padding:6px 10px; cursor:pointer; color: var(--muted); background: transparent; }
+    .admin-section{ border: 1px solid var(--border); border-radius: 14px; padding:16px; background: rgba(255,255,255,.02); }
+    .admin-status{ border-left: 4px solid var(--accent); padding:12px 12px; border-radius: 10px; background: rgba(79,140,255,.08); margin-bottom: 16px; }
+    .admin-status.open{ border-left-color: var(--success); background: rgba(34,197,94,.10); }
+    .admin-status.closed{ border-left-color: var(--danger); background: rgba(239,68,68,.10); }
+
+    /* Utilities */
+    .row{ display:flex; gap:12px; flex-wrap: wrap; }
+    .hidden{ display:none !important; }
+    [aria-busy="true"]{ pointer-events:none; opacity:.75; }
+
+    /* Mobile tweaks */
+    @media (max-width: 720px){
+      body{ padding: 14px; }
+      .section,.header{ padding: 22px; }
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      *{ transition: none !important; animation: none !important; }
+    }
+
+    /* === Cohesion overrides to match index.html (scoped, no destructive overrides) === */
+    :root {
+      --primary-50: #e2fdfd;
+      --primary-500: #6cf4f4;
+      --primary-600: #74dfe8;
+      --primary-700: #34cdcd;
+      --secondary-500: #e68c31;
+      --neutral-50: #f6f8fb;
+      --neutral-100: #f1f5f9;
+      --neutral-200: #e5e7eb;
+      --neutral-700: #535353;
+      --neutral-800: #3a3a3a;
+      --blue: #00678b;
+    }
+    /* Palette mapping */
+    :root{
+      --bg: #ffffff;
+      --bg-elev: #ffffff;
+      --card: #ffffff;
+      --text: var(--neutral-800);
+      --muted: #6b7280;
+      --accent: var(--primary-700);
+      --accent-2: var(--secondary-500);
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --ring: rgba(52,205,205,.35);
+      --border: #e5e7eb;
+      --shadow: 0 10px 24px rgba(0,0,0,.08);
+    }
+    /* Global page feel */
+    body{ display:block !important; padding:0 !important; align-items: initial !important; justify-content: initial !important; }
+    html, body{
+      background: var(--bg) !important;
+      color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", sans-serif !important;
+    }
+    /* Site header matching home */
+    .site-header { position: sticky; top:0; z-index:50; background:white; border-bottom:1px solid var(--neutral-200); }
+    .site-container { max-width:1280px; margin:0 auto; padding:0 1rem; }
+    .site-header-content { display:flex; align-items:center; justify-content:space-between; padding:1.5rem 0; }
+    .logo { display:flex; align-items:center; gap:.75rem; font-size:1.5rem; font-weight:700; color: var(--blue); text-decoration:none;}
+    /* .logo-icon { width:40px; height:40px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:white; background: linear-gradient(135deg, var(--primary-500), var(--primary-700)); } */
+    .logo-icon { 
+        width: 60px; height: 60px;
+        display: flex; align-items: center; justify-content: center;
+        border-radius: 8px;
+        /* optional: drop the gradient if you just want the logo */
+        /* background: transparent; */
+        overflow: hidden;                 /* <- clip anything larger than 40×40 */
+        }
+        .logo-icon img {
+        width: 100%; height: 100%;       /* <- make the image fit the box */
+        object-fit: contain;              /* <- preserve aspect ratio */
+        display: block;                   /* <- avoid inline gap quirks */
+        }
+    
+    .site-header nav ul{ list-style:none; display:flex; gap:2rem; margin:0; padding:0; align-items: center;}
+    .site-header nav a{ color: var(--neutral-700); text-decoration:none; font-weight:500; padding:.5rem 1rem; border-radius:6px; transition: all 0.2s; }
+    .site-header nav a:hover{ color: var(--primary-700); background: var(--primary-50); }
+    .site-header nav a[aria-current="page"]{ color: var(--primary-700); background: transparent; }
+    /* Main app container */
+    #app.container{ max-width:1000px; padding: 1rem; margin: 1.5rem auto; position: relative; background: var(--card); border:1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+    .header{ background:#fff !important; border-bottom:1px solid var(--border); border-radius: 18px 18px 0 0; padding: 1.25rem 1.25rem 1rem 1.25rem; }
+    .header h1{ font-size: 2rem; font-weight: 700; letter-spacing:.2px; margin: 0 0 .5rem; color: var(--neutral-800); }
+    .header .event-name{ font-size: 1.375rem; font-weight: 600; color: var(--accent); margin: 0 0 .25rem; }
+    .header .subtitle{ color: var(--muted) !important; margin: 0; font-weight: 400; }
+    /* Status chip */
+    .chip{ background: rgba(0,0,0,.02); border: 1px solid var(--border); color: var(--neutral-800); }
+    .chip .dot{ box-shadow: 0 0 0 4px rgba(16,185,129,.15); }
+    .chip.closed .dot{ box-shadow: 0 0 0 4px rgba(239,68,68,.15); }
+    /* Cards/Sections */
+    .section{ background:#fff !important; border:1px solid var(--border); border-radius:16px; box-shadow: none; }
+    .section + .section{ margin-top: 16px; }
+    .hint{ color:#6b7280; }
+    /* Inputs */
+    .input, select, textarea{ background:#fff !important; border:1px solid var(--border) !important; color: var(--text) !important; }
+    .input::placeholder{ color:#8b93a7 !important; }
+    .input:focus, select:focus, textarea:focus{ background:#fff; border-color: var(--accent); box-shadow: 0 0 0 3px var(--ring); outline: none; }
+    .choice, .soft, .admin-section{ background: #fff !important; border:1px solid var(--border) !important; }
+    .checkbox{ background: #fff !important; border:1px solid var(--border) !important; }
+    /* Buttons */
+    .btn{ background:#fff; border-color: var(--border); color: var(--text); }
+    .btn:hover{ transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,0,0,.08); border-color: rgba(0,0,0,.08); }
+    .btn-primary{ background: linear-gradient(180deg, rgba(52,205,205,.18), rgba(52,205,205,.12)); border-color: rgba(52,205,205,.45); }
+    .btn-success{ background: linear-gradient(180deg, rgba(16,185,129,.18), rgba(16,185,129,.10)); border-color: rgba(16,185,129,.45); }
+    .btn-danger{ background: linear-gradient(180deg, rgba(239,68,68,.18), rgba(239,68,68,.12)); border-color: rgba(239,68,68,.45); }
+    /* Alerts/Statuses */
+    .status-success{ background: rgba(16,185,129,.12); color: #065f46; border-color: rgba(16,185,129,.35); }
+    .status-error{ background: rgba(239,68,68,.12); color: #7f1d1d; border-color: rgba(239,68,68,.35); }
+    .status-info{ background: rgba(52,205,205,.12); color: #0f766e; border-color: rgba(52,205,205,.35); }
+    .status-warning{ background: rgba(245,158,11,.12); color: #92400e; border-color: rgba(245,158,11,.40); }
+    /* Modal backdrop/content */
+    .modal{ background: rgba(0,0,0,.45); }
+    .modal-content{ background:#fff; color: var(--text); border:1px solid var(--border); }
+    /* Small polish */
+    .admin-status{ background: rgba(52,205,205,.08) !important; border-left:4px solid var(--accent) !important; }
+    .admin-status.open{ border-left-color: var(--success) !important; background: rgba(16,185,129,.10) !important; }
+    .admin-status.closed{ border-left-color: var(--danger) !important; background: rgba(239,68,68,.10) !important; }
+    /* Attendance status minimal + at bottom-right of the card */
+    #attendanceStatusDisplay{ position:absolute; right: 18px; bottom: 12px;
+      background: transparent !important; border:none !important; box-shadow:none !important; 
+      color:#64748b; padding: 4px 6px; gap:.35rem; }
+    #attendanceStatusDisplay .dot{ width:8px; height:8px; box-shadow: 0 0 0 3px rgba(16,185,129,.15); }
+    #attendanceStatusDisplay.closed .dot{ background:#ef4444 !important; box-shadow: 0 0 0 3px rgba(239,68,68,.15); }
+    #attendanceStatusDisplay .chip-label{ display:none; } /* keep it terse */
+    
+    .admin-btn{ display:none !important; }
+
+    /* Responsive */
+    @media (max-width: 720px){
+      .site-header-content{ padding: 1rem 0; }
+      #app.container{ margin: 1rem auto; padding: .75rem; }
+    }
+    /* Hide broken logo image if not found */
+    .header img[src=""], .header img:not([src]), .header img[src="8ecf755edc7133f5667b041c28797e5b.png"] { display: none; }
+  </style>
+
+</head>
+
+<body>
+
+  <div class="offline-indicator" id="offlineIndicator">
+    Offline Mode - Data will sync when connection returns
+  </div>
+
+  <header class="site-header">
+    <div class="site-container">
+      <div class="site-header-content">
+        <a href="index.html" class="logo">
+          <div class="logo-icon">
+          <img src="images/logo.png" alt="Glasgow SDA Church logo" decoding="async" fetchpriority="high">
+        </div>
+
+          Glasgow SDA Church
+        </a>
+        <nav>
+          <ul>
+            <li><a href="checkin.html" aria-current="page">Check In</a></li>
+            <li><a href="bulletin.html">Get Bulletin</a></li>
+            <li><a href="giving.html">Giving</a></li>
+            <li><a href="#" onclick="openAdminModal(); return false;">Admin</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <div class="container" id="app">
+    <button class="admin-btn" onclick="openAdminModal()" aria-label="Open Admin">Admin</button>
+
+    <div class="header">
+      <img src="8ecf755edc7133f5667b041c28797e5b.png" alt="Glasgow SDA Church Logo" 
+       style="height: 34px; vertical-align: middle; margin-right: 10px; border-radius: 6px;">
+      <h1>Welcome!</h1>
+      <div class="event-name" id="currentEventType"></div>
+      <div id="attendanceStatusDisplay" class="chip"><span class="dot"></span><span id="attendanceStatusText">Status</span></div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingScreen" class="section loading-screen">
+      <div class="spinner" role="status" aria-label="Loading"></div>
+      <div>
+        <h3 style="margin:.5rem 0 0">Loading Church Attendance System…</h3>
+        <p class="hint" style="margin:.35rem 0 0">Checking attendance session status.</p>
+      </div>
+    </div>
+
+    <!-- Closed -->
+    <div id="attendanceClosedMessage" class="section hidden" role="status">
+      <div class="attendance-closed">
+        <h3 style="margin:0 0 8px">Attendance Not Available</h3>
+        <p class="hint">Attendance has not been opened for today yet. Please contact an administrator to begin today's attendance session.</p>
+        <div style="margin-top:12px">
+          <button class="btn btn-primary" onclick="checkSessionStatus()">Check Again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main form -->
+    <div id="formContainer" class="section hidden">
+      <div id="statusMessage" aria-live="polite"></div>
+
+      <form id="checkinForm" class="form-grid">
+        <!-- Name -->
+        <div class="form-group">
+          <label for="name">Your Name</label>
+          <div class="input-wrap">
+            <input class="input" id="name" name="name" type="text" placeholder="Start typing your name…" autocomplete="off" required />
+            <div id="suggestions" class="suggestions"></div>
+          </div>
+        </div>
+
+        <!-- Age + Contact -->
+        <div class="form-group">
+          <label>Age Category</label>
+          <div class="radio-row">
+            <label class="choice"><input type="radio" id="ageAdult" name="ageCategory" value="adult" checked /> Adult (18+)</label>
+            <label class="choice"><input type="radio" id="ageYouth" name="ageCategory" value="youth" /> Youth (13–17)</label>
+          </div>
+        </div>
+
+        <div class="form-group" id="contactSection">
+          <label for="contact">Contact Information</label>
+          <input class="input" id="contact" name="contact" type="text" placeholder="Phone number or email address" />
+        </div>
+
+        <!-- Family - FIXED: Inline checkbox -->
+        <div class="form-group">
+          <div class="checkbox">
+            <input type="checkbox" id="withFamily" />
+            <label for="withFamily">I'm here with family members</label>
+          </div>
+        </div>
+
+        <div id="familySection" class="family-section soft">
+          <h3 style="margin:0 0 10px">Family Members Attending</h3>
+          <div id="familyMembers" class="form-grid"></div>
+
+          <div class="admin-section" style="margin-top:12px">
+            <h4 style="margin:0 0 10px">Add Family Member</h4>
+            <div class="form-grid">
+              <div class="input-wrap">
+                <input class="input" id="newFamilyMember" type="text" placeholder="Family member name" autocomplete="off" />
+                <div id="familySuggestions" class="suggestions"></div>
+              </div>
+              <select id="newFamilyAge" class="input">
+                <option value="adult">Adult</option>
+                <option value="youth">Youth</option>
+                <option value="child">Child</option>
+                <option value="infant">Infant</option>
+              </select>
+              <div id="familyContactField" class="input-wrap" style="grid-column: 1 / -1">
+                <input class="input" id="newFamilyContact" type="text" placeholder="Contact info" />
+                <div class="checkbox" style="margin-top:8px">
+                  <input type="checkbox" id="sameContactCheckbox" />
+                  <label for="sameContactCheckbox" class="hint">Same as above</label>
+                </div>
+              </div>
+              <div style="grid-column: 1 / -1">
+                <button type="button" class="btn" onclick="addFamilyMember()">Add Family Member</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visitor - FIXED: Inline checkbox -->
+        <div class="form-group">
+          <div class="checkbox">
+            <input type="checkbox" id="isVisitor" />
+            <label for="isVisitor">I'm visiting today</label>
+          </div>
+        </div>
+
+        <div id="visitorSection" class="visitor-section soft">
+          <p class="hint">We're so glad you're here with us today!</p>
+          <div class="form-group" style="margin-top:10px">
+            <label for="visitorStatus">This is my:</label>
+            <select id="visitorStatus" class="input" name="visitorStatus">
+              <option value="first_time">First time visiting</option>
+              <option value="returning_visitor">Second or third visit</option>
+              <option value="been_a_while">Been a while since I visited</option>
+            </select>
+          </div>
+        </div>
+
+        <button id="submitBtn" type="submit" class="btn btn-success">
+          <span id="submitText">Check In ✅</span>
+          <span id="submitLoader" class="spinner" style="width:16px;height:16px;border-width:2px; display:none"></span>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Admin Modal -->
+  <div id="adminModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="adminTitle">Admin Panel</h2>
+        <button class="close" onclick="closeAdminModal()" aria-label="Close">&times;</button>
+      </div>
+
+      <div id="passwordSection" class="admin-section">
+        <h3 style="margin:0 0 8px">Enter Admin Password</h3>
+        <div class="row">
+          <input class="input" type="password" id="adminPassword" placeholder="Enter password" />
+          <button type="button" class="btn btn-primary" onclick="verifyPassword()">Login</button>
+        </div>
+      </div>
+
+      <div id="adminFunctions" class="hidden">
+        <div id="attendanceStatusSection" class="admin-status">
+          <h4 style="margin:0 0 6px">Today's Attendance Status</h4>
+          <div id="adminAttendanceStatus" class="hint">Checking status…</div>
+          <div id="closeAttendanceFromStatus" style="margin-top:12px; display:none;">
+            <button type="button" class="btn btn-danger" onclick="closeAttendance()">Close & Send Report</button>
+          </div>
+        </div>
+
+        <div id="eventSetupSection" class="admin-section">
+          <h3 style="margin:0 0 8px">Event & Attendance Management</h3>
+          <div class="form-grid">
+            <label for="eventTypeSelect">Today's Event Type</label>
+            <select id="eventTypeSelect" class="input" onchange="toggleCustomEvent()">
+              <option value="Sabbath Worship">Sabbath Worship</option>
+              <option value="Prayer Meeting">Prayer Meeting</option>
+              <option value="Youth Program">Youth Program</option>
+              <option value="Concert">Concert</option>
+              <option value="Evangelistic Meeting">Evangelistic Meeting</option>
+              <option value="Communion Service">Communion Service</option>
+              <option value="Other">Other</option>
+            </select>
+            <input class="input hidden" id="customEventType" type="text" placeholder="Enter custom event type" />
+
+            <div id="attendanceControls" class="row" style="margin-top:10px">
+              <button id="openAttendanceBtn" type="button" class="btn btn-success" onclick="openAttendance()">Open Today's Attendance</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="manualExportSection" class="admin-section hidden">
+          <h3 style="margin:0 0 8px">Manual Export</h3>
+          <div class="row">
+            <button id="manualExportBtn" type="button" class="btn btn-primary" onclick="exportTodayAttendance()">Email Today's Report</button>
+          </div>
+          <small class="hint">Sends CSV file to ct.glasgow.church@gmail.com</small>
+        </div>
+
+        <div id="syncSection" class="admin-section">
+          <h3 style="margin:0 0 8px">Data Synchronization</h3>
+          <div class="row">
+            <button id="syncBtn" type="button" class="btn btn-primary" onclick="syncOfflineData()">Sync Offline Data</button>
+            <button id="clearCacheBtn" type="button" class="btn" onclick="clearLocalData()">Clear Local Cache</button>
+          </div>
+          <div id="syncStatus" class="hint" style="margin-top:8px">All data synced</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== CONFIG =====
+    const CONFIG = {
+      SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbxzsPerH8g7Nvliy8ukpLfR3RmWF_hVQIZ7keUtvV1TtS1T-Wm2Qxmochrf74SYMmHn_A/exec',
+      ADMIN_PASSWORD: 'glasgow2025',
+      MAX_RETRIES: 2,
+      RETRY_DELAY: 1000,
+      REQUEST_TIMEOUT: 15000,
+      INACTIVITY_TIMEOUT: 120000,
+      CACHE_EXPIRY: 180000,
+      SESSION_CACHE_EXPIRY: 30000,
+      OFFLINE_QUEUE_KEY: 'glasgow_offline_queue',
+      SYNC_INTERVAL: 30000, // 30 seconds
+      LOCAL_MEMBERS_KEY: 'glasgow_members_db',
+      LOCAL_SESSION_KEY: 'glasgow_attendance_session',
+      LOCAL_ATTENDANCE_KEY: 'glasgow_local_attendance'
+    };
+
+    // ===== STATE =====
+    let state = {
+      memberDatabase: [],
+      allIndividuals: [],
+      attendanceSession: null,
+      isAdminAuthenticated: false,
+      isLoading: false,
+      pendingCallbacks: new Map(),
+      inactivityTimer: null,
+      lastActivity: Date.now(),
+      isOnline: navigator.onLine,
+      offlineQueue: [],
+      syncTimer: null,
+      lastSameContactState: false,
+      localAttendance: []
+    };
+
+    // ===== UTILITY FUNCTIONS =====
+    function capitalizeNames(name) {
+      if (!name || typeof name !== 'string') return name;
+      return name.split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+    }
+
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // ===== ENHANCED LOCAL STORAGE MANAGEMENT =====
+    const localStore = {
+      // Members database
+      saveMembers(members) {
+        try {
+          const data = {
+            members,
+            timestamp: Date.now(),
+            expiry: Date.now() + CONFIG.CACHE_EXPIRY
+          };
+          localStorage.setItem(CONFIG.LOCAL_MEMBERS_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn('Failed to save members locally:', e);
+        }
+      },
+
+      getMembers() {
+        try {
+          const item = localStorage.getItem(CONFIG.LOCAL_MEMBERS_KEY);
+          if (!item) return null;
+          const parsed = JSON.parse(item);
+          if (Date.now() > parsed.expiry) {
+            localStorage.removeItem(CONFIG.LOCAL_MEMBERS_KEY);
+            return null;
+          }
+          return parsed.members;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      // Attendance session
+      saveSession(session) {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const data = {
+            session,
+            date: today,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(CONFIG.LOCAL_SESSION_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.warn('Failed to save session locally:', e);
+        }
+      },
+
+      getSession() {
+        try {
+          const item = localStorage.getItem(CONFIG.LOCAL_SESSION_KEY);
+          if (!item) return null;
+          const parsed = JSON.parse(item);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date !== today) {
+            localStorage.removeItem(CONFIG.LOCAL_SESSION_KEY);
+            return null;
+          }
+          return parsed.session;
+        } catch (e) {
+          return null;
+        }
+      },
+
+      // Local attendance data
+      saveLocalAttendance(attendance) {
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const data = {
+            attendance,
+            date: today,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(CONFIG.LOCAL_ATTENDANCE_KEY, JSON.stringify(data));
+          state.localAttendance = attendance;
+        } catch (e) {
+          console.warn('Failed to save local attendance:', e);
+        }
+      },
+
+      getLocalAttendance() {
+        try {
+          const item = localStorage.getItem(CONFIG.LOCAL_ATTENDANCE_KEY);
+          if (!item) return [];
+          const parsed = JSON.parse(item);
+          const today = new Date().toISOString().split('T')[0];
+          if (parsed.date !== today) {
+            localStorage.removeItem(CONFIG.LOCAL_ATTENDANCE_KEY);
+            return [];
+          }
+          return parsed.attendance || [];
+        } catch (e) {
+          return [];
+        }
+      },
+
+      // Clear today's attendance data (when opening new session)
+      clearTodayAttendance() {
+        try {
+          localStorage.removeItem(CONFIG.LOCAL_ATTENDANCE_KEY);
+          state.localAttendance = [];
+        } catch (e) {
+          console.warn('Failed to clear today attendance:', e);
+        }
+      },
+
+      // Update member in local database
+      updateMember(memberData) {
+        try {
+          const members = this.getMembers() || [];
+          const existingIndex = members.findIndex(m => 
+            (m.name || '').toLowerCase() === (memberData.name || '').toLowerCase()
+          );
+          
+          if (existingIndex >= 0) {
+            members[existingIndex] = { ...members[existingIndex], ...memberData };
+          } else {
+            members.push(memberData);
+          }
+          
+          this.saveMembers(members);
+          state.memberDatabase = members;
+          buildIndividualsList();
+        } catch (e) {
+          console.warn('Failed to update member locally:', e);
+        }
+      }
+    };
+
+    // ===== ENHANCED CACHE MANAGEMENT =====
+    const cache = {
+      get(key) {
+        try {
+          const item = localStorage.getItem(key);
+          if (!item) return null;
+          const parsed = JSON.parse(item);
+          if (Date.now() > parsed.expiry) {
+            this.remove(key);
+            return null;
+          }
+          return parsed.data;
+        } catch (e) {
+          return null;
+        }
+      },
+      set(key, data, ttl = CONFIG.CACHE_EXPIRY) {
+        try {
+          const item = {
+            data,
+            expiry: Date.now() + ttl,
+            timestamp: Date.now()
+          };
+          localStorage.setItem(key, JSON.stringify(item));
+        } catch (e) {
+          console.warn('Cache storage failed:', e);
+        }
+      },
+      remove(key) {
+        try {
+          localStorage.removeItem(key);
+        } catch (e) {
+          console.warn('Cache removal failed:', e);
+        }
+      },
+      clear() {
+        try {
+          const keys = Object.keys(localStorage);
+          keys.forEach(key => {
+            if (key.startsWith('glasgow_') || key.startsWith('api_')) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch (e) {
+          console.warn('Cache clear failed:', e);
+        }
+      }
+    };
+
+    // ===== OFFLINE QUEUE MANAGEMENT =====
+    const offlineQueue = {
+      add(data) {
+        try {
+          const queue = this.getQueue();
+          queue.push({
+            ...data,
+            id: 'offline_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+            timestamp: Date.now()
+          });
+          localStorage.setItem(CONFIG.OFFLINE_QUEUE_KEY, JSON.stringify(queue));
+          this.updateSyncStatus();
+        } catch (e) {
+          console.error('Failed to add to offline queue:', e);
+        }
+      },
+      getQueue() {
+        try {
+          const queue = localStorage.getItem(CONFIG.OFFLINE_QUEUE_KEY);
+          return queue ? JSON.parse(queue) : [];
+        } catch (e) {
+          return [];
+        }
+      },
+      clear() {
+        try {
+          localStorage.removeItem(CONFIG.OFFLINE_QUEUE_KEY);
+          this.updateSyncStatus();
+        } catch (e) {
+          console.error('Failed to clear offline queue:', e);
+        }
+      },
+      updateSyncStatus() {
+        const queue = this.getQueue();
+        const statusEl = document.getElementById('syncStatus');
+        if (statusEl) {
+          if (queue.length === 0) {
+            statusEl.textContent = 'All data synced';
+            statusEl.className = 'hint';
+          } else {
+            statusEl.textContent = `${queue.length} items waiting to sync`;
+            statusEl.className = 'hint status-warning';
+          }
+        }
+      }
+    };
+
+    // ===== NETWORK DETECTION =====
+    function updateOnlineStatus() {
+      const wasOnline = state.isOnline;
+      state.isOnline = navigator.onLine;
+      
+      const indicator = document.getElementById('offlineIndicator');
+      if (state.isOnline) {
+        indicator.style.display = 'none';
+        if (!wasOnline) {
+          showMessage('Connection restored - syncing data...', 'info');
+          syncOfflineData();
+        }
+      } else {
+        indicator.style.display = 'block';
+        if (wasOnline) {
+          showMessage('Working offline - data will sync when connection returns', 'warning');
+        }
+      }
+    }
+
+    // ===== INACTIVITY MANAGEMENT =====
+    function resetInactivityTimer() {
+      state.lastActivity = Date.now();
+      if (state.inactivityTimer) {
+        clearTimeout(state.inactivityTimer);
+      }
+      state.inactivityTimer = setTimeout(() => {
+        if (!state.isLoading && document.getElementById('formContainer').classList.contains('hidden') === false) {
+          if (!document.getElementById('adminModal').style.display || document.getElementById('adminModal').style.display === 'none') {
+            window.location.href = 'index.html';
+          }
+        }
+      }, CONFIG.INACTIVITY_TIMEOUT);
+    }
+
+    function trackActivity() {
+      resetInactivityTimer();
+    }
+
+    // ===== ENHANCED JSONP API =====
+    const api = {
+      generateCallbackName(){ return 'jsonp_' + Date.now() + '_' + Math.random().toString(36).slice(2); },
+      jsonpRequest(payload, timeout = CONFIG.REQUEST_TIMEOUT){
+        return new Promise((resolve, reject) => {
+          if (!state.isOnline) {
+            reject(new Error('No internet connection'));
+            return;
+          }
+
+          const cb = this.generateCallbackName();
+          let script = null; let timeoutId = null;
+
+          const cleanup = () => {
+            if (script && script.parentNode) script.parentNode.removeChild(script);
+            try { delete window[cb]; } catch(e) {}
+            if (timeoutId) clearTimeout(timeoutId);
+            state.pendingCallbacks.delete(cb);
+          };
+          state.pendingCallbacks.set(cb, cleanup);
+
+          window[cb] = (data) => { cleanup(); resolve(data); };
+
+          script = document.createElement('script');
+          script.onerror = () => { cleanup(); reject(new Error('JSONP script failed to load')); };
+
+          const params = new URLSearchParams();
+          params.append('payload', JSON.stringify(payload));
+          params.append('callback', cb);
+
+          script.src = `${CONFIG.SCRIPT_URL}?${params}`;
+          script.async = true; script.defer = true;
+
+          timeoutId = setTimeout(() => { cleanup(); reject(new Error(`Request timeout after ${timeout}ms`)); }, timeout);
+
+          document.head.appendChild(script);
+        });
+      },
+      async call(payload, retries = CONFIG.MAX_RETRIES, useCache = false){
+        if (!state.isOnline) {
+          if (payload.action === 'addAttendance') {
+            offlineQueue.add(payload);
+            return { success: true, offline: true };
+          }
+          throw new Error('No internet connection');
+        }
+
+        for (let attempt = 0; attempt <= retries; attempt++){
+          try{
+            const res = await this.jsonpRequest(payload);
+            if (typeof res !== 'object' || res === null) throw new Error('Invalid response format');
+            return res;
+          }catch(err){
+            if (attempt === retries) throw new Error(`API call failed after ${retries+1} attempts: ${err.message}`);
+            await this.delay(CONFIG.RETRY_DELAY * Math.pow(2, attempt));
+          }
+        }
+      },
+      delay(ms){ return new Promise(r => setTimeout(r, ms)); },
+      cleanup(){ state.pendingCallbacks.forEach(fn => fn()); state.pendingCallbacks.clear(); }
+    };
+
+    // ===== UI helpers =====
+    const ui = {
+      showLoading(){
+        document.getElementById('loadingScreen').classList.remove('hidden');
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('attendanceClosedMessage').classList.add('hidden');
+        state.isLoading = true;
+      },
+      showForm(){
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('formContainer').classList.remove('hidden');
+        document.getElementById('attendanceClosedMessage').classList.add('hidden');
+        this.updateEventTypeDisplay();
+        this.updateAttendanceStatusDisplay(true);
+        state.isLoading = false;
+        resetInactivityTimer();
+      },
+      showClosed(){
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('formContainer').classList.add('hidden');
+        document.getElementById('attendanceClosedMessage').classList.remove('hidden');
+        this.updateAttendanceStatusDisplay(false);
+        state.isLoading = false;
+        resetInactivityTimer();
+      },
+      updateEventTypeDisplay(){
+        const display = document.getElementById('currentEventType');
+        if (state.attendanceSession?.eventType){
+          display.textContent = state.attendanceSession.eventType;
+          display.style.display = 'block';
+        }else{
+          display.style.display = 'none';
+        }
+      },
+      updateAttendanceStatusDisplay(isOpen){
+        const chip = document.getElementById('attendanceStatusDisplay');
+        const text = document.getElementById('attendanceStatusText');
+        const dot = chip.querySelector('.dot');
+        chip.classList.remove('hidden');
+        if (isOpen){ 
+          text.textContent = 'Check in below'; 
+          dot.style.background = 'var(--success)'; 
+          chip.classList.remove('closed');
+        }
+        else{ 
+          text.textContent = 'Attendance Closed'; 
+          dot.style.background = 'var(--danger)'; 
+          chip.classList.add('closed');
+        }
+      },
+      updateAdminStatus(){
+        if (!state.isAdminAuthenticated) return;
+        const statusSection = document.getElementById('attendanceStatusSection');
+        const statusDiv = document.getElementById('adminAttendanceStatus');
+        const openBtn = document.getElementById('openAttendanceBtn');
+        const closeFromStatus = document.getElementById('closeAttendanceFromStatus');
+        const manualExport = document.getElementById('manualExportSection');
+        const eventSetupSection = document.getElementById('eventSetupSection');
+
+        const isOpen = state.attendanceSession?.isOpen;
+        const localCount = state.localAttendance.length;
+        const totalCheckins = (state.attendanceSession?.totalCheckins || 0) + localCount;
+
+        if (isOpen) {
+          statusSection.classList.add('open');
+          statusSection.classList.remove('closed');
+          statusDiv.innerHTML = '';
+
+          const rows = [
+            ['Status:', 'OPEN 🟢'],
+            ['Event:', state.attendanceSession.eventType || 'Not set'],
+            ['Opened:', new Date(state.attendanceSession.openedAt).toLocaleTimeString()],
+            ['Total Check-ins:', totalCheckins]
+          ];
+
+          rows.forEach(([label, value], i) => {
+            const strong = document.createElement('strong');
+            strong.textContent = label + ' ';
+            statusDiv.appendChild(strong);
+
+            if (i === 3) {
+              const span = document.createElement('span');
+              span.id = 'checkinCount';
+              span.textContent = value;
+              statusDiv.appendChild(span);
+            } else {
+              statusDiv.appendChild(document.createTextNode(value));
+            }
+
+            statusDiv.appendChild(document.createElement('br'));
+          });
+
+          eventSetupSection.style.display = 'none';
+          closeFromStatus.style.display = 'block';
+          manualExport.classList.remove('hidden');
+        } else {
+          statusSection.classList.add('closed');
+          statusSection.classList.remove('open');
+          statusDiv.innerHTML = '';
+
+          const strong1 = document.createElement('strong');
+          strong1.textContent = 'Status: ';
+          statusDiv.append(strong1, 'CLOSED 🔴', document.createElement('br'));
+
+          const strong2 = document.createElement('strong');
+          strong2.textContent = 'Message: ';
+          statusDiv.append(strong2, 'Attendance has not been opened for today.', document.createElement('br'));
+
+          const small = document.createElement('small');
+          small.textContent = "Open attendance to allow check-ins for today's event.";
+          statusDiv.appendChild(small);
+
+          eventSetupSection.style.display = 'block';
+          closeFromStatus.style.display = 'none';
+          manualExport.classList.add('hidden');
+        }
+        
+        offlineQueue.updateSyncStatus();
+      }
+    };
+
+    // ===== ENHANCED INIT WITH LOCAL STORAGE PRIORITY =====
+    async function initializeApp(){
+      ui.showLoading();
+      updateOnlineStatus();
+      
+      // Load local data first
+      const localMembers = localStore.getMembers();
+      const localSession = localStore.getSession();
+      state.localAttendance = localStore.getLocalAttendance();
+      
+      if (localMembers) {
+        state.memberDatabase = localMembers;
+        buildIndividualsList();
+      }
+      
+      if (localSession) {
+        state.attendanceSession = localSession;
+        if (localSession.isOpen) {
+          ui.showForm();
+        } else {
+          ui.showClosed();
+        }
+      } else {
+        ui.showClosed();
+      }
+      
+      // Sync with server in background if online
+      if (state.isOnline) {
+        Promise.allSettled([loadMembers(), checkSessionStatus()]).catch(console.error);
+      }
+    }
+
+    // ===== SESSION MANAGEMENT WITH LOCAL STORAGE PRIORITY =====
+    async function checkSessionStatus(){
+      // First check local storage
+      const localSession = localStore.getSession();
+      if (localSession) {
+        state.attendanceSession = localSession;
+        return localSession.isOpen || false;
+      }
+      
+      if (!state.isOnline) {
+        return false;
+      }
+      
+      try{
+        const today = new Date().toISOString().split('T')[0];
+        const result = await api.call({ action:'getAttendanceSession', date: today });
+        if (result.success){
+          state.attendanceSession = result.session;
+          localStore.saveSession(result.session); // Save to local storage
+          return state.attendanceSession?.isOpen || false;
+        }
+        return false;
+      }catch(err){
+        console.error('Session check failed:', err);
+        return localSession ? localSession.isOpen || false : false;
+      }
+    }
+
+    // ===== ENHANCED MEMBERS WITH LOCAL STORAGE PRIORITY =====
+    async function loadMembers(){
+      // First load from local storage
+      const localMembers = localStore.getMembers();
+      if (localMembers) {
+        state.memberDatabase = localMembers;
+        buildIndividualsList();
+      }
+      
+      if (!state.isOnline) {
+        return localMembers ? true : false;
+      }
+      
+      try{
+        const result = await api.call({ action:'getMembers' });
+        if (result.success){
+          const serverMembers = result.members || [];
+          localStore.saveMembers(serverMembers); // Save to local storage
+          state.memberDatabase = serverMembers;
+          buildIndividualsList();
+          return true;
+        }
+        return localMembers ? true : false;
+      }catch(err){
+        console.error('Failed to load members:', err);
+        return localMembers ? true : false;
+      }
+    }
+
+    function buildIndividualsList(){
+      state.allIndividuals = [];
+      state.memberDatabase.forEach(member => {
+        state.allIndividuals.push({
+          name: capitalizeNames(member.name),
+          ageCategory: member.ageCategory,
+          contactInfo: member.contactInfo,
+          isPrimary: true,
+          family: member.family || [],
+          firstVisit: member.firstVisit,
+          totalVisits: member.totalVisits
+        });
+        (member.family || []).forEach(fm => {
+          const exists = state.allIndividuals.find(ind => ind.isPrimary && ind.name.toLowerCase() === (fm.name || '').toLowerCase());
+          if (!exists){
+            state.allIndividuals.push({
+              name: capitalizeNames(fm.name),
+              ageCategory: fm.ageCategory || 'adult',
+              contactInfo: fm.contactInfo || '',
+              isPrimary: false,
+              family: [], firstVisit:'', totalVisits:0
+            });
+          }
+        });
+      });
+      const seen = new Set(); const unique = [];
+      for (const ind of state.allIndividuals){
+        const key = (ind.name || '').toLowerCase();
+        if (!seen.has(key)){ seen.add(key); unique.push(ind); }
+      }
+      state.allIndividuals = unique;
+    }
+
+    // ===== ENHANCED FAMILY RELATIONSHIP HANDLING =====
+    function updateFamilyRelationships(primaryName, familyMembers) {
+      // Update primary member's family list
+      localStore.updateMember({
+        name: primaryName,
+        family: familyMembers.map(fm => ({
+          name: fm.name,
+          ageCategory: fm.ageCategory,
+          contactInfo: fm.contactInfo
+        }))
+      });
+
+      // For each adult/youth family member, add primary to their family list
+      familyMembers.forEach(fm => {
+        if (fm.ageCategory === 'adult' || fm.ageCategory === 'youth') {
+          const existingMember = state.memberDatabase.find(m => 
+            (m.name || '').toLowerCase() === (fm.name || '').toLowerCase()
+          );
+          
+          const currentFamily = existingMember ? (existingMember.family || []) : [];
+          const primaryExists = currentFamily.find(f => 
+            (f.name || '').toLowerCase() === (primaryName || '').toLowerCase()
+          );
+          
+          if (!primaryExists) {
+            const primaryMember = state.memberDatabase.find(m => 
+              (m.name || '').toLowerCase() === (primaryName || '').toLowerCase()
+            );
+            
+            if (primaryMember) {
+              currentFamily.push({
+                name: primaryName,
+                ageCategory: primaryMember.ageCategory,
+                contactInfo: primaryMember.contactInfo
+              });
+            }
+          }
+          
+          // Update this family member's record
+          localStore.updateMember({
+            name: fm.name,
+            ageCategory: fm.ageCategory,
+            contactInfo: fm.contactInfo,
+            family: currentFamily
+          });
+        }
+      });
+    }
+
+    // ===== ENHANCED FORM SUBMIT WITH LOCAL STORAGE PRIORITY =====
+    async function submitAttendance(e){
+      e.preventDefault();
+      trackActivity();
+      
+      if (!state.attendanceSession || !state.attendanceSession.isOpen){
+        showMessage('Attendance is not open. Please contact an administrator.', 'error'); 
+        return;
+      }
+
+      const name = capitalizeNames(document.getElementById('name').value.trim());
+      if (!name){ 
+        showMessage('Please enter your name', 'error'); 
+        return; 
+      }
+
+      const ageCategory = document.querySelector('input[name="ageCategory"]:checked').value;
+      const contactInfo = document.getElementById('contact').value.trim();
+      if (!contactInfo){ 
+        showMessage('Please provide contact information', 'error'); 
+        return; 
+      }
+
+      const isVisitor = document.getElementById('isVisitor').checked;
+      const withFamily = document.getElementById('withFamily').checked;
+      const visitorStatus = isVisitor ? document.getElementById('visitorStatus').value : '';
+
+      const now = new Date();
+      const date = now.toISOString().split('T')[0];
+      const time = now.toTimeString().split(' ')[0].substring(0,5);
+
+      const familyMembers = [];
+      const familyMemberData = [];
+      if (withFamily){
+        const checked = document.querySelectorAll('input[name="familyMember"]:checked');
+        checked.forEach(cb => {
+          const n = capitalizeNames(cb.value), a = cb.dataset.age, c = cb.dataset.contact;
+          familyMembers.push(n);
+          familyMemberData.push({ name:n, ageCategory:a, contactInfo:c, isVisitor, visitorStatus });
+        });
+      }
+
+      try{
+        setButtonLoading(true);
+        showMessage('Submitting attendance…', 'info');
+        
+        // Save to local storage immediately
+        const attendanceEntry = {
+          timestamp: now.toISOString(),
+          id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+          name, ageCategory, contactInfo,
+          date, time,
+          isVisitor, visitorStatus,
+          withFamily, familyMembers,
+          sessionId: state.attendanceSession.sessionId
+        };
+        
+        state.localAttendance.push(attendanceEntry);
+        localStore.saveLocalAttendance(state.localAttendance);
+        
+        // Update member database with family relationships
+        const primaryMemberData = {
+          name, ageCategory, contactInfo,
+          family: familyMembers.map(fname => {
+            const checkbox = [...document.querySelectorAll('input[name="familyMember"]')].find(cb => cb.value === fname);
+            return { 
+              name: capitalizeNames(fname), 
+              ageCategory: checkbox ? checkbox.dataset.age : 'adult', 
+              contactInfo: checkbox ? checkbox.dataset.contact : '' 
+            };
+          }),
+          firstVisit: (isVisitor && visitorStatus === 'first_time') ? date : '',
+          totalVisits: 1
+        };
+        
+        localStore.updateMember(primaryMemberData);
+        
+        // Update family relationships for adults/youth
+        if (withFamily && familyMembers.length > 0) {
+          updateFamilyRelationships(name, familyMemberData);
+        }
+        
+        // Update session count
+        if (state.attendanceSession){
+          state.attendanceSession.totalCheckins = (state.attendanceSession.totalCheckins || 0) + 1 + familyMemberData.length;
+          localStore.saveSession(state.attendanceSession);
+          const el = document.getElementById('checkinCount'); 
+          if (el) el.textContent = (state.attendanceSession.totalCheckins || 0) + state.localAttendance.length;
+        }
+
+        showWelcomeMessage(name, isVisitor, visitorStatus, familyMembers, false);
+        resetForm();
+        setButtonLoading(false);
+        
+        // Try to sync with server in background
+        if (state.isOnline) {
+          syncAttendanceToServer(attendanceEntry, primaryMemberData, familyMemberData);
+        } else {
+          // Add to offline queue
+          offlineQueue.add({
+            action: 'addAttendance',
+            attendanceData: attendanceEntry,
+            memberData: primaryMemberData
+          });
+        }
+        
+      }catch(err){
+        console.error('Submit error:', err);
+        showMessage('Failed to submit: ' + err.message, 'error');
+        setButtonLoading(false);
+      }
+    }
+
+    // ===== BACKGROUND SYNC FUNCTION =====
+    async function syncAttendanceToServer(attendanceData, memberData, familyMemberData = []) {
+      try {
+        const result = await api.call({ 
+          action:'addAttendance', 
+          attendanceData: attendanceData, 
+          memberData: memberData 
+        });
+        
+        if (result.success) {
+          // Sync family members if any
+          if (familyMemberData.length > 0) {
+            familyMemberData.forEach(async (fm) => {
+              const familyAttendanceData = {
+                timestamp: attendanceData.timestamp,
+                id: 'web_family_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+                name: fm.name, ageCategory: fm.ageCategory, contactInfo: fm.contactInfo,
+                date: attendanceData.date, time: attendanceData.time, 
+                isVisitor: fm.isVisitor, visitorStatus: fm.visitorStatus,
+                withFamily:false, familyMembers: [],
+                sessionId: attendanceData.sessionId
+              };
+              const familyMemberMemberData = {
+                name: fm.name, ageCategory: fm.ageCategory, contactInfo: fm.contactInfo,
+                family: [], firstVisit: (fm.isVisitor && fm.visitorStatus === 'first_time') ? attendanceData.date : '', totalVisits: 1
+              };
+              try{ 
+                await api.call({ 
+                  action:'addAttendance', 
+                  attendanceData: familyAttendanceData, 
+                  memberData: familyMemberMemberData 
+                }); 
+              }catch(e){ 
+                console.warn('Family member sync failed:', fm.name, e); 
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('Background sync failed:', e);
+        // Add to offline queue if not already there
+        offlineQueue.add({
+          action: 'addAttendance',
+          attendanceData: attendanceData,
+          memberData: memberData
+        });
+      }
+    }
+
+    function showWelcomeMessage(name, isVisitor, visitorStatus, familyMembers, isOffline = false) {
+      const visitorMessages = {
+        first_time: "We're so glad you're visiting us for the first time!",
+        been_a_while: "Great to see you back after a while!",
+        returning_visitor: "Thanks for visiting us again!"
+      };
+
+      let message = `<div class="welcome-name">Welcome, ${name}!</div>`;
+      
+      if (isVisitor) {
+        message += `<div>${visitorMessages[visitorStatus] || "Thanks for visiting us!"}</div>`;
+      } else {
+        message += `<div>You're checked in!</div>`;
+      }
+
+      if (familyMembers && familyMembers.length) {
+        const MAX_NAMES = 4;
+        const shown = familyMembers.slice(0, MAX_NAMES);
+        const remaining = familyMembers.length - shown.length;
+        
+        let familyText = shown.join(", ");
+        if (remaining > 0) familyText += ` and ${remaining} more`;
+        
+        const familyLabel = familyMembers.length === 1 ? "Family member" : "Family members";
+        message += `<div class="family-list">${familyLabel} also checked in: ${familyText}</div>`;
+      }
+
+      if (isOffline) {
+        message += `<div class="hint" style="margin-top: 8px;">Saved offline - will sync when connection returns</div>`;
+      }
+
+      showMessage(message, 'success');
+    }
+
+    // ===== ENHANCED AUTOCOMPLETE =====
+    const handleNameInput = debounce(function(e){
+      trackActivity();
+      const q = e.target.value.toLowerCase().trim();
+      const sug = document.getElementById('suggestions');
+      if (q.length < 2){ sug.style.display='none'; return; }
+      const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
+      if (matches.length) {
+          sug.innerHTML = '';
+          matches.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'suggestion-item';
+            div.textContent = p.name;
+            div.addEventListener('click', () => selectMember(p.name));
+            sug.appendChild(div);
+          });
+          sug.style.display = 'block';
+        } else {
+          sug.style.display = 'none';
+        }
+    }, 300);
+    
+    const handleFamilyNameInput = debounce(function(e){
+      trackActivity();
+      const q = e.target.value.toLowerCase().trim();
+      const sug = document.getElementById('familySuggestions');
+      if (q.length < 2){ sug.style.display='none'; return; }
+      const matches = state.allIndividuals.filter(p => (p.name||'').toLowerCase().includes(q)).slice(0,8);
+      if (matches.length) {
+        sug.innerHTML = '';
+        matches.forEach(p => {
+          const div = document.createElement('div');
+          div.className = 'suggestion-item';
+          div.textContent = p.name;
+          div.addEventListener('click', () => selectFamilyMember(p.name));
+          sug.appendChild(div);
+        });
+        sug.style.display = 'block';
+      } else {
+        sug.style.display = 'none';
+      }
+    }, 300);
+    
+    function selectMember(name){
+      trackActivity();
+      document.getElementById('name').value = name;
+      document.getElementById('suggestions').style.display = 'none';
+      const individual = state.allIndividuals.find(ind => ind.name === name);
+      if (!individual) return;
+      if (individual.ageCategory){
+        const ageRadio = document.querySelector(`input[name="ageCategory"][value="${individual.ageCategory}"]`);
+        if (ageRadio){ ageRadio.checked = true; toggleContactSection(); }
+      }
+      if (individual.contactInfo){ document.getElementById('contact').value = individual.contactInfo; }
+      const primary = state.memberDatabase.find(m => (m.name||'').toLowerCase() === (name||'').toLowerCase());
+      if (primary && (primary.family||[]).length){
+        document.getElementById('withFamily').checked = true;
+        toggleFamilySection();
+        loadExistingFamily(primary.family);
+      }
+    }
+    
+    function selectFamilyMember(name){
+      trackActivity();
+      document.getElementById('newFamilyMember').value = name;
+      document.getElementById('familySuggestions').style.display = 'none';
+      const ind = state.allIndividuals.find(p => p.name === name);
+      if (ind){
+        document.getElementById('newFamilyAge').value = ind.ageCategory || 'adult';
+        toggleFamilyContactField();
+        if (ind.contactInfo){
+          document.getElementById('newFamilyContact').value = ind.contactInfo;
+          document.getElementById('sameContactCheckbox').checked = false;
+          state.lastSameContactState = false;
+        }
+      }
+    }
+
+    // ===== ENHANCED FAMILY HANDLING =====
+    function loadExistingFamily(family){
+      const wrap = document.getElementById('familyMembers'); 
+      wrap.innerHTML = '';
+      family.forEach(f => addFamilyMemberToUI(capitalizeNames(f.name), f.ageCategory || 'adult', f.contactInfo || '', true));
+    }
+    
+    function addFamilyMemberToUI(name, ageCategory, contactInfo, isChecked = true) {
+      const wrap = document.getElementById('familyMembers');
+
+      const ageEmojiMap = { adult: '👤', youth: '🧑', child: '👶', infant: '🍼' };
+      const ageEmoji = ageEmojiMap[ageCategory] || '👤';
+      const ageLabel = ageCategory ? (ageCategory.charAt(0).toUpperCase() + ageCategory.slice(1)) : '';
+      const contactDisplay = contactInfo ? ` • ${contactInfo}` : '';
+
+      const item = document.createElement('div');
+      item.className = 'family-member';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.name = 'familyMember';
+      cb.value = name;
+      cb.dataset.age = ageCategory || 'adult';
+      cb.dataset.contact = contactInfo || '';
+      cb.checked = !!isChecked;
+      cb.addEventListener('change', trackActivity);
+
+      const media = document.createElement('div');
+      media.className = 'family-media';
+
+      const strong = document.createElement('strong');
+      strong.textContent = `${ageEmoji} ${name}`;
+
+      const hint = document.createElement('span');
+      hint.className = 'hint';
+      hint.textContent = `${ageLabel}${contactDisplay}`;
+
+      media.append(strong, hint);
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'remove-btn';
+      btn.textContent = '×';
+      btn.addEventListener('click', (e) => {
+        trackActivity();
+        removeFamilyMember(e.currentTarget);
+      });
+
+      item.append(cb, media, btn);
+      wrap.appendChild(item);
+    }
+
+    function addFamilyMember(){
+      trackActivity();
+      const nameInput = document.getElementById('newFamilyMember');
+      const ageSelect = document.getElementById('newFamilyAge');
+      const contactInput = document.getElementById('newFamilyContact');
+      const same = document.getElementById('sameContactCheckbox');
+      
+      const name = capitalizeNames(nameInput.value.trim()); 
+      const ageCategory = ageSelect.value;
+      let contactInfo = contactInput.value.trim();
+      
+      if (same.checked) {
+        contactInfo = document.getElementById('contact').value.trim();
+      }
+      
+      if (name){
+        addFamilyMemberToUI(name, ageCategory, contactInfo, true);
+        nameInput.value = ''; 
+        contactInput.value=''; 
+        
+        // Keep the same contact checkbox state for next family member
+        if (state.lastSameContactState) {
+          same.checked = true;
+          contactInput.style.display = 'none';
+        } else {
+          same.checked = false;
+          contactInput.style.display = 'block';
+        }
+        
+        ageSelect.value='adult';
+        toggleFamilyContactField(); 
+        document.getElementById('familySuggestions').style.display='none';
+      }
+    }
+    
+    function removeFamilyMember(btn){ 
+      trackActivity();
+      btn.parentElement.remove(); 
+    }
+
+    // ===== ENHANCED SYNC FUNCTIONS =====
+    async function syncOfflineData() {
+      trackActivity();
+      const queue = offlineQueue.getQueue();
+      if (queue.length === 0) {
+        showMessage('All data is already synced', 'info');
+        return;
+      }
+
+      if (!state.isOnline) {
+        showMessage('Cannot sync - no internet connection', 'error');
+        return;
+      }
+
+      showMessage(`Syncing ${queue.length} offline entries...`, 'info');
+      
+      let synced = 0;
+      let failed = 0;
+
+      for (const item of queue) {
+        try {
+          const result = await api.call(item);
+          if (result.success) {
+            synced++;
+          } else {
+            failed++;
+            console.error('Sync failed for item:', item, result);
+          }
+        } catch (error) {
+          failed++;
+          console.error('Sync error for item:', item, error);
+        }
+      }
+
+      if (failed === 0) {
+        offlineQueue.clear();
+        showMessage(`Successfully synced ${synced} entries`, 'success');
+      } else {
+        showMessage(`Synced ${synced} entries, ${failed} failed. Will retry later.`, 'warning');
+      }
+    }
+
+    function clearLocalData() {
+      trackActivity();
+      if (confirm('This will clear all cached data. Are you sure?')) {
+        cache.clear();
+        offlineQueue.clear();
+        // Clear local storage
+        localStorage.removeItem(CONFIG.LOCAL_MEMBERS_KEY);
+        localStorage.removeItem(CONFIG.LOCAL_SESSION_KEY);
+        localStorage.removeItem(CONFIG.LOCAL_ATTENDANCE_KEY);
+        showMessage('Local data cleared', 'info');
+      }
+    }
+
+    // ===== ADMIN FUNCTIONS =====
+    function openAdminModal(){
+      trackActivity();
+      const modal = document.getElementById('adminModal');
+      modal.style.display = 'flex';
+      if (state.isAdminAuthenticated){
+        document.getElementById('passwordSection').classList.add('hidden');
+        document.getElementById('adminFunctions').classList.remove('hidden');
+        ui.updateAdminStatus();
+      }else{
+        document.getElementById('passwordSection').classList.remove('hidden');
+        document.getElementById('adminFunctions').classList.add('hidden');
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+    
+    function closeAdminModal(){ 
+      trackActivity();
+      document.getElementById('adminModal').style.display = 'none'; 
+    }
+    
+    function verifyPassword(){
+      trackActivity();
+      const pwd = document.getElementById('adminPassword').value;
+      if (pwd === CONFIG.ADMIN_PASSWORD){
+        state.isAdminAuthenticated = true;
+        document.getElementById('passwordSection').classList.add('hidden');
+        document.getElementById('adminFunctions').classList.remove('hidden');
+        showMessage('Admin access granted', 'success');
+        ui.updateAdminStatus();
+      }else{
+        showMessage('Incorrect password', 'error');
+        document.getElementById('adminPassword').value = '';
+      }
+    }
+    
+    async function openAttendance(){
+      trackActivity();
+      const select = document.getElementById('eventTypeSelect');
+      const custom = document.getElementById('customEventType');
+      let eventType = select.value;
+      if (eventType === 'Other'){
+        eventType = custom.value.trim();
+        if (!eventType){ showMessage('Please enter a custom event type', 'error'); return; }
+      }
+      
+      try{
+        showMessage('Opening attendance session…', 'info');
+        
+        // Create session locally first
+        const now = new Date();
+        const newSession = {
+          sessionId: 'session_' + now.getTime(),
+          eventType: eventType,
+          date: now.toISOString().split('T')[0],
+          isOpen: true,
+          openedAt: now.toISOString(),
+          totalCheckins: 0
+        };
+        
+        // Clear today's attendance data when opening new session
+        localStore.clearTodayAttendance();
+        
+        // Save session locally first
+        state.attendanceSession = newSession;
+        localStore.saveSession(newSession);
+        
+        showMessage(`Attendance opened for: ${eventType}`, 'success');
+        ui.showForm(); 
+        ui.updateAdminStatus(); 
+        closeAdminModal();
+        
+        // Sync with server in background
+        if (state.isOnline) {
+          api.call({ action:'openAttendanceSession', eventType, date: newSession.date }).then(result => {
+            if (result.success) {
+              // Update with server session ID if different
+              if (result.session.sessionId !== newSession.sessionId) {
+                state.attendanceSession = result.session;
+                localStore.saveSession(result.session);
+              }
+            }
+          }).catch(err => {
+            console.warn('Failed to sync session with server:', err);
+            // Keep local session active
+          });
+        }
+        
+      }catch(err){ 
+        console.error(err); 
+        showMessage('Failed to open attendance: ' + err.message, 'error'); 
+      }
+    }
+    
+    async function closeAttendance(){
+      trackActivity();
+      if (!confirm("Are you sure you want to close today's attendance? This will automatically send the attendance report and prevent further check-ins.")) return;
+      
+      try{
+        showMessage('Closing attendance and sending report…', 'info');
+        
+        // Sync all local data before closing
+        if (state.isOnline) {
+          await syncOfflineData();
+        }
+        
+        // Close locally first
+        if (state.attendanceSession) {
+          state.attendanceSession.isOpen = false;
+          localStore.saveSession(state.attendanceSession);
+        }
+        
+        ui.showClosed(); 
+        ui.updateAdminStatus();
+        
+        // Try to close on server
+        if (state.isOnline) {
+          api.call({ action:'closeAttendanceSession', date: new Date().toISOString().split('T')[0] }).then(result => {
+            if (result.success) {
+              showMessage(result.message, 'success');
+              state.attendanceSession = null;
+              localStorage.removeItem(CONFIG.LOCAL_SESSION_KEY);
+            }
+          }).catch(err => {
+            console.warn('Failed to sync closure with server:', err);
+            showMessage('Attendance closed locally - will sync with server when online', 'warning');
+          });
+        } else {
+          showMessage('Attendance closed locally - will sync with server when online', 'warning');
+        }
+        
+      }catch(err){ 
+        console.error(err); 
+        showMessage('Failed to close attendance: ' + err.message, 'error'); 
+      }
+    }
+    
+    async function exportTodayAttendance(){
+      trackActivity();
+      
+      try{
+        showMessage("Preparing today's attendance report…", 'info');
+        
+        // Sync all data first if online
+        if (state.isOnline) {
+          await syncOfflineData();
+          const result = await api.call({ action:'exportTodayAttendance' });
+          if (result.success){ 
+            showMessage(result.message, 'success'); 
+          } else{ 
+            throw new Error(result.error || 'Failed to export attendance'); 
+          }
+        } else {
+          showMessage('Cannot export - no internet connection. Data will be synced when online.', 'error');
+        }
+        
+      }catch(err){ 
+        console.error(err); 
+        showMessage('Failed to export attendance: ' + err.message, 'error'); 
+      }
+    }
+
+    // ===== HELPER FUNCTIONS =====
+    function showMessage(message, type = 'info') {
+      const box = document.getElementById('statusMessage');
+      box.innerHTML = '';
+
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `status-message status-${type}`;
+      msgDiv.innerHTML = message;
+      msgDiv.style.display = 'block';
+
+      box.appendChild(msgDiv);
+
+      // Alert disappears in 1 second as requested
+      setTimeout(() => { 
+        if (box.contains(msgDiv)) {
+          box.removeChild(msgDiv);
+        }
+      }, 1000);
+    }
+
+    function setButtonLoading(isLoading){
+      const btn = document.getElementById('submitBtn');
+      const text = document.getElementById('submitText');
+      const loader = document.getElementById('submitLoader');
+      if (isLoading){ 
+        btn.setAttribute('disabled',''); 
+        text.textContent = 'Submitting…'; 
+        loader.style.display='inline-block'; 
+      }
+      else{ 
+        btn.removeAttribute('disabled'); 
+        text.textContent='Check In ✅'; 
+        loader.style.display='none'; 
+      }
+    }
+    
+    function resetForm(){
+      document.getElementById('checkinForm').reset();
+      document.getElementById('ageAdult').checked = true;
+      document.getElementById('familySection').style.display = 'none';
+      document.getElementById('visitorSection').style.display = 'none';
+      document.getElementById('contactSection').style.display = 'block';
+      document.getElementById('familyMembers').innerHTML = '';
+      document.getElementById('suggestions').style.display = 'none';
+      document.getElementById('familySuggestions').style.display = 'none';
+      document.getElementById('newFamilyAge').value = 'adult';
+      document.getElementById('sameContactCheckbox').checked = false;
+      state.lastSameContactState = false;
+      toggleFamilyContactField();
+      trackActivity();
+    }
+    
+    function toggleContactSection(){ 
+      document.getElementById('contactSection').style.display = 'block'; 
+    }
+    
+    function toggleFamilySection(){ 
+      trackActivity();
+      const on = document.getElementById('withFamily').checked; 
+      document.getElementById('familySection').style.display = on ? 'block' : 'none'; 
+    }
+    
+    function toggleVisitorSection(){ 
+      trackActivity();
+      const on = document.getElementById('isVisitor').checked; 
+      document.getElementById('visitorSection').style.display = on ? 'block' : 'none'; 
+    }
+    
+    function toggleFamilyContactField(){
+      const sel = document.getElementById('newFamilyAge').value;
+      const field = document.getElementById('familyContactField');
+      if (sel === 'adult' || sel === 'youth'){ 
+        field.style.display = 'block'; 
+        // If "same contact" was previously checked, keep the field hidden
+        if (document.getElementById('sameContactCheckbox').checked) {
+          document.getElementById('newFamilyContact').style.display = 'none';
+        }
+      }
+      else{ 
+        field.style.display = 'none'; 
+        document.getElementById('newFamilyContact').value = ''; 
+        document.getElementById('sameContactCheckbox').checked = false; 
+        state.lastSameContactState = false;
+      }
+    }
+    
+    function handleSameContactCheckbox(){
+      trackActivity();
+      const same = document.getElementById('sameContactCheckbox');
+      const input = document.getElementById('newFamilyContact');
+      const primary = document.getElementById('contact').value;
+      
+      state.lastSameContactState = same.checked;
+      
+      if (same.checked){ 
+        input.value = primary; 
+        input.style.display = 'none'; 
+      }
+      else{ 
+        input.style.display = 'block'; 
+        input.value = '';
+      }
+    }
+    
+    function toggleCustomEvent(){
+      trackActivity();
+      const sel = document.getElementById('eventTypeSelect');
+      const custom = document.getElementById('customEventType');
+      if (sel.value === 'Other'){ 
+        custom.classList.remove('hidden'); 
+        custom.required = true; 
+      }
+      else{ 
+        custom.classList.add('hidden'); 
+        custom.required = false; 
+        custom.value = ''; 
+      }
+    }
+
+    // ===== AUTO SYNC SETUP =====
+    function startAutoSync() {
+      if (state.syncTimer) {
+        clearInterval(state.syncTimer);
+      }
+      
+      state.syncTimer = setInterval(() => {
+        if (state.isOnline && offlineQueue.getQueue().length > 0) {
+          syncOfflineData();
+        }
+      }, CONFIG.SYNC_INTERVAL);
+    }
+
+    // ===== EVENT LISTENERS =====
+    document.addEventListener('DOMContentLoaded', () => {
+      // Network status listeners
+      window.addEventListener('online', updateOnlineStatus);
+      window.addEventListener('offline', updateOnlineStatus);
+
+      // Activity tracking
+      const activityEvents = ['click', 'keypress', 'scroll', 'touchstart'];
+      activityEvents.forEach(event => {
+        document.addEventListener(event, trackActivity, { passive: true });
+      });
+
+      // Form listeners
+      document.getElementById('checkinForm').addEventListener('submit', submitAttendance);
+      document.getElementById('name').addEventListener('input', handleNameInput);
+      document.getElementById('newFamilyMember').addEventListener('input', handleFamilyNameInput);
+      document.getElementById('withFamily').addEventListener('change', toggleFamilySection);
+      document.getElementById('isVisitor').addEventListener('change', toggleVisitorSection);
+      document.getElementById('newFamilyAge').addEventListener('change', toggleFamilyContactField);
+      document.getElementById('sameContactCheckbox').addEventListener('change', handleSameContactCheckbox);
+
+      document.querySelectorAll('input[name="ageCategory"]').forEach(r => r.addEventListener('change', toggleContactSection));
+
+      // Click outside to close suggestions
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.input-wrap')){
+          document.getElementById('suggestions').style.display = 'none';
+          document.getElementById('familySuggestions').style.display = 'none';
+        }
+      });
+
+      // Modal listeners
+      window.addEventListener('click', (e) => {
+        const modal = document.getElementById('adminModal'); 
+        if (e.target === modal) closeAdminModal();
+      });
+      
+      // Cleanup on page unload
+      window.addEventListener('beforeunload', () => {
+        api.cleanup();
+        if (state.inactivityTimer) clearTimeout(state.inactivityTimer);
+        if (state.syncTimer) clearInterval(state.syncTimer);
+      });
+
+      // Initialize
+      toggleContactSection(); 
+      toggleFamilyContactField();
+      startAutoSync();
+      initializeApp();
+    });
+  </script>
+</body>
+</html>
